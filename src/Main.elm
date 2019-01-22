@@ -4,6 +4,7 @@ import Browser
 import Html exposing (Html, div, h1, img, text)
 import Html.Attributes exposing (src)
 import List as L exposing (drop, head, tail)
+import String exposing (fromInt)
 
 
 
@@ -11,7 +12,7 @@ import List as L exposing (drop, head, tail)
 
 
 type alias Model =
-    { block : Block }
+    { block1 : Block, block2 : Block, depth : Int }
 
 
 type Block
@@ -31,14 +32,6 @@ type Word
     | ConnectorWord String
 
 
-z =
-    "he is cool"
-
-
-z1 =
-    Nominal (mkWord "he") (mkWord "cool")
-
-
 mkWord : String -> Block
 mkWord =
     Word << NormalWord
@@ -52,6 +45,14 @@ mkImplicitWord =
 mkConnectorWord : String -> Block
 mkConnectorWord =
     Word << ConnectorWord
+
+
+z =
+    "he is cool"
+
+
+z1 =
+    Nominal (Mubtada <| mkWord "he") (Kabr <| mkWord "cool")
 
 
 
@@ -155,9 +156,100 @@ bFS block =
     go (enqueueBlock block emptyQueue)
 
 
+height : Block -> Int
+height block =
+    case block of
+        Nominal b1 b2 ->
+            0 + max (height b1) (height b2)
+
+        Verbal b1 b2 b3 ->
+            0 + max (height b3) (max (height b1) (height b2))
+
+        Fil b ->
+            1 + height b
+
+        Fial b ->
+            1 + height b
+
+        Mubtada b ->
+            1 + height b
+
+        Kabr b ->
+            1 + height b
+
+        MB b ->
+            1 + height b
+
+        Word _ ->
+            0
+
+
+blockToString : Block -> String
+blockToString block =
+    case block of
+        Mubtada _ ->
+            "Mubtada"
+
+        Kabr _ ->
+            "Kabr"
+
+        Fil _ ->
+            "Fil"
+
+        Fial _ ->
+            "Fial"
+
+        MB _ ->
+            "Mafoo bihi"
+
+        Nominal _ _ ->
+            "Nominal"
+
+        Verbal _ _ _ ->
+            "Verbal"
+
+        Word _ ->
+            "Word"
+
+
+bFS2 : Int -> Block -> List String
+bFS2 height1 bl =
+    let
+        go h block =
+            case ( h, block ) of
+                ( _, Nominal b1 b2 ) ->
+                    go h b1 ++ go h b2
+
+                ( _, Verbal b1 b2 b3 ) ->
+                    go h b1 ++ go h b2 ++ go h b3
+
+                ( _, Word _ ) ->
+                    []
+
+                ( 0, b ) ->
+                    [ blockToString b ]
+
+                ( _, Fil b ) ->
+                    go (h - 1) b
+
+                ( _, Fial b ) ->
+                    go (h - 1) b
+
+                ( _, Mubtada b ) ->
+                    go (h - 1) b
+
+                ( _, Kabr b ) ->
+                    go (h - 1) b
+
+                ( _, MB b ) ->
+                    go (h - 1) b
+    in
+    go (height1 - 1) bl
+
+
 init : ( Model, Cmd Msg )
 init =
-    ( { block = y1 }, Cmd.none )
+    ( { block1 = y1, block2 = z1, depth = 2 }, Cmd.none )
 
 
 
@@ -182,7 +274,17 @@ view model =
     div []
         [ img [ src "/logo.svg" ] []
         , h1 [] [ text "Your Elm App is working!" ]
-        , text (Debug.toString <| bFS model.block)
+        , div []
+            ([ text (Debug.toString <| bFS model.block1)
+             , text (fromInt <| height model.block1)
+             ]
+                ++ L.map (\h -> text << Debug.toString <| bFS2 h model.block1) (L.range 1 (height model.block1))
+            )
+        , div []
+            [ text (Debug.toString <| bFS model.block2)
+            , text (Debug.toString <| bFS2 model.depth model.block2)
+            , text (fromInt <| height model.block2)
+            ]
         ]
 
 
