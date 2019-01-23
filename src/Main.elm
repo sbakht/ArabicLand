@@ -1,18 +1,15 @@
 module Main exposing (Block(..), Model, Msg(..), init, main, update, view)
 
 import Browser
-import Html exposing (Html, div, h1, img, text)
-import Html.Attributes exposing (src)
+import Html exposing (Html, a, div, h1, img, span, text)
+import Html.Attributes exposing (class, src)
+import Html.Events exposing (onClick)
 import List as L exposing (drop, head, tail)
 import String exposing (fromInt)
 
 
 
 ---- MODEL ----
-
-
-type alias Model =
-    { block1 : Block, block2 : Block, depth : Int }
 
 
 type Block
@@ -212,7 +209,7 @@ blockToString block =
             "Word"
 
 
-bFS2 : Int -> Block -> List String
+bFS2 : Int -> Block -> List Block
 bFS2 height1 bl =
     let
         go h block =
@@ -227,7 +224,7 @@ bFS2 height1 bl =
                     []
 
                 ( 0, b ) ->
-                    [ blockToString b ]
+                    [ b ]
 
                 ( _, Fil b ) ->
                     go (h - 1) b
@@ -247,9 +244,13 @@ bFS2 height1 bl =
     go (height1 - 1) bl
 
 
+type alias Model =
+    { block1 : Block, depth : Int }
+
+
 init : ( Model, Cmd Msg )
 init =
-    ( { block1 = y1, block2 = z1, depth = 2 }, Cmd.none )
+    ( { block1 = y1, depth = 2 }, Cmd.none )
 
 
 
@@ -258,11 +259,17 @@ init =
 
 type Msg
     = NoOp
+    | ClickTier Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( model, Cmd.none )
+    case msg of
+        ClickTier i ->
+            ( { model | depth = i }, Cmd.none )
+
+        NoOp ->
+            ( model, Cmd.none )
 
 
 
@@ -274,18 +281,26 @@ view model =
     div []
         [ img [ src "/logo.svg" ] []
         , h1 [] [ text "Your Elm App is working!" ]
-        , div []
-            ([ text (Debug.toString <| bFS model.block1)
-             , text (fromInt <| height model.block1)
-             ]
-                ++ L.map (\h -> text << Debug.toString <| bFS2 h model.block1) (L.range 1 (height model.block1))
-            )
-        , div []
-            [ text (Debug.toString <| bFS model.block2)
-            , text (Debug.toString <| bFS2 model.depth model.block2)
-            , text (fromInt <| height model.block2)
-            ]
+        , div [] [ text (Debug.toString <| bFS model.block1) ]
+        , fancy (bFS model.block1) (L.map (\x -> blockToString x :: bFS x) <| bFS2 model.depth model.block1)
+        , text << Debug.toString << L.map (\x -> blockToString x :: bFS x) <| bFS2 model.depth model.block1
+        , viewTierLinks (height model.block1)
         ]
+
+
+viewTierLinks : Int -> Html Msg
+viewTierLinks x =
+    div [] <| L.map (\i -> a [ onClick <| ClickTier i ] [ text <| "Tier " ++ fromInt i ]) (L.range 1 x)
+
+
+fancy : List String -> List (List String) -> Html Msg
+fancy xs xxs =
+    let
+        at : String -> Int
+        at s =
+            Maybe.withDefault 100 <| L.head <| L.map (\( i, x ) -> i) <| L.filter (\( i, x ) -> L.member s x) <| L.indexedMap (\i x -> ( i, x )) xxs
+    in
+    div [ class "words" ] (L.map (\s -> (\i -> span [ class <| "h" ++ i ] [ text <| s ++ " " ]) << fromInt <| at s) xs)
 
 
 
