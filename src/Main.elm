@@ -4,7 +4,7 @@ import Browser
 import Html exposing (Html, a, div, h1, img, span, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
-import List as L exposing (drop, head, tail)
+import List as L exposing (drop, head, tail, map)
 import String exposing (fromInt)
 
 
@@ -24,24 +24,24 @@ type Block
 
 
 type Word
-    = NormalWord String
-    | HiddenWord String
-    | ConnectorWord String
+    = NormalWord {id: Int, text: String}
+    | HiddenWord {id: Int, text: String}
+    | ConnectorWord {id: Int, text: String}
 
 
-mkWord : String -> Block
-mkWord =
-    Word << NormalWord
-
-
-mkImplicitWord : String -> Block
-mkImplicitWord =
-    Word << HiddenWord
-
-
-mkConnectorWord : String -> Block
-mkConnectorWord =
-    Word << ConnectorWord
+--mkWord : Int -> String  -> Block
+--mkWord id text =
+--    Word << NormalWord {id = i}
+--
+--
+--mkImplicitWord : String -> Block
+--mkImplicitWord =
+--    Word << HiddenWord
+--
+--
+--mkConnectorWord : String -> Block
+--mkConnectorWord =
+--    Word << ConnectorWord
 
 
 z =
@@ -57,7 +57,7 @@ z1 =
 
 
 y1 =
-    Nominal (Mubtada <| mkWord "he") (Kabr (Verbal (Fil <| mkWord "resisted") (Fial <| mkImplicitWord "hidden he") (MB <| mkWord "the fluff")))
+    Nominal (Mubtada <| Word <| NormalWord 1 "he") (Kabr (Verbal (Fil <| Word <| NormalWord 2 "resisted") (Fial <| Word <| HiddenWord 3 "hidden he") (MB <| mkWord "the fluff")))
 
 
 type Queue a
@@ -121,7 +121,7 @@ wordToString : Word -> String
 wordToString word =
     case word of
         NormalWord x ->
-            x
+            x.text
 
         HiddenWord _ ->
             "HIDDEN"
@@ -209,8 +209,8 @@ blockToString block =
             "Word"
 
 
-bFS2 : Int -> Block -> List Block
-bFS2 height1 bl =
+blocksAtHeight : Int -> Block -> List Block
+blocksAtHeight height1 bl =
     let
         go h block =
             case ( h, block ) of
@@ -271,27 +271,32 @@ update msg model =
         NoOp ->
             ( model, Cmd.none )
 
-
+stringsEachSection : Int -> Block -> List (List String)
+stringsEachSection depth block = map (\x -> blockToString x :: bFS x) <| blocksAtHeight depth block
 
 ---- VIEW ----
 
 
 view : Model -> Html Msg
-view model =
+view {depth, block1} =
     div []
         [ img [ src "/logo.svg" ] []
-        , h1 [] [ text "Your Elm App is working!" ]
-        , div [] [ text (Debug.toString <| bFS model.block1) ]
-        , fancy (bFS model.block1) (L.map (\x -> blockToString x :: bFS x) <| bFS2 model.depth model.block1)
-        , text << Debug.toString << L.map (\x -> blockToString x :: bFS x) <| bFS2 model.depth model.block1
-        , viewTierLinks (height model.block1)
+        , div [] [ text (Debug.toString <| bFS block1) ]
+        , fancy (bFS block1) <| stringsEachSection depth block1
+        , text << Debug.toString <| stringsEachSection depth block1
+        , viewTierLinks (height block1)
         ]
 
 
 viewTierLinks : Int -> Html Msg
 viewTierLinks x =
-    div [] <| L.map (\i -> a [ onClick <| ClickTier i ] [ text <| "Tier " ++ fromInt i ]) (L.range 1 x)
+    div [] (map viewTierLink (L.range 1 x))
 
+viewTierLink : Int -> Html Msg
+viewTierLink i = div [] [a [ onClick <| ClickTier i ] [ tierText i]]
+
+tierText : Int -> Html Msg
+tierText i = text ("Tier " ++ fromInt i)
 
 fancy : List String -> List (List String) -> Html Msg
 fancy xs xxs =
