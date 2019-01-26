@@ -4,7 +4,7 @@ import Browser
 import Html exposing (Html, a, div, h1, img, span, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
-import List as L exposing (drop, head, tail, map)
+import List as L exposing (drop, head, map, tail)
 import Maybe as M
 import String exposing (fromInt)
 
@@ -25,47 +25,49 @@ type Block
 
 
 type Word
-    = NormalWord {id: Int, text: String}
-    | HiddenWord {id: Int, text: String}
-    | ConnectorWord {id: Int, text: String}
+    = NormalWord { id : Int, text : String }
+    | HiddenWord { id : Int, text : String }
+    | ConnectorWord { id : Int, text : String }
 
 
-mkWord : Int -> String  -> Word
+mkWord : Int -> String -> Word
 mkWord id text =
-    NormalWord {id = id, text = text}
+    NormalWord { id = id, text = text }
 
 
 mkImplicitWord : Int -> String -> Word
 mkImplicitWord id text =
-    HiddenWord {id = id, text = text}
+    HiddenWord { id = id, text = text }
 
-mkWordW : Int -> String  -> Block
+
+mkWordW : Int -> String -> Block
 mkWordW id text =
-    Word <| NormalWord {id = id, text = text}
+    Word <| NormalWord { id = id, text = text }
 
 
 mkImplicitWordW : Int -> String -> Block
-mkImplicitWordW id text=
-    Word <| HiddenWord {id = id, text = text}
+mkImplicitWordW id text =
+    Word <| HiddenWord { id = id, text = text }
 
 
 mkConnectorWordW : Int -> String -> Block
-mkConnectorWordW id text=
-    Word <| ConnectorWord {id = id, text = text}
+mkConnectorWordW id text =
+    Word <| ConnectorWord { id = id, text = text }
 
 
 z =
     "he is cool"
 
 
+
 --z1 =
 --    Nominal (Mubtada <| mkWord "he") (Kabr <| mkWord "cool")
-
-
-
 --y = "he resisted the fluff"
 
-wordsArr = [mkWord 1 "he", mkWord 2 "resisted", mkImplicitWord 2 "hidden he", mkWord 3 "the fluff"]
+
+wordsArr =
+    [ mkWord 1 "he", mkWord 2 "resisted", mkImplicitWord 2 "hidden he", mkWord 3 "the fluff" ]
+
 
 y1 =
     Nominal (Mubtada <| mkWordW 1 "he") (Kabr (Verbal (Fil <| mkWordW 2 "resisted") (Fial <| mkImplicitWordW 2 "hidden he") (MB <| mkWordW 3 "the fluff")))
@@ -189,7 +191,8 @@ hasWord word block =
             hasWord word b
 
         Word w ->
-           word == w
+            word == w
+
 
 height : Block -> Int
 height block =
@@ -309,22 +312,27 @@ update msg model =
         NoOp ->
             ( model, Cmd.none )
 
+
 stringsEachSection : Int -> Block -> List (List String)
-stringsEachSection depth block = map (\x -> blockToString x :: bFS wordToString x) <| blocksAtHeight depth block
+stringsEachSection depth block =
+    map (\x -> blockToString x :: bFS wordToString x) <| blocksAtHeight depth block
+
 
 wordsEachSection : Int -> Block -> List (List Word)
-wordsEachSection depth block = map (\x -> bFS (\a -> a) x) <| blocksAtHeight depth block
+wordsEachSection depth block =
+    map (\x -> bFS (\a -> a) x) <| blocksAtHeight depth block
+
+
 
 ---- VIEW ----
 
 
 view : Model -> Html Msg
-view {depth, block1} =
+view { depth, block1 } =
     div []
         [ img [ src "/logo.svg" ] []
         , div [] [ text (Debug.toString <| bFS wordToString block1) ]
-        --, fancy (wordsArr) <| wordsEachSection depth block1
-        , fancy (wordsArr) <| blocksAtHeight depth block1
+        , viewWords (blocksAtHeight depth block1) wordsArr
         , text << Debug.toString <| stringsEachSection depth block1
         , viewTierLinks (height block1)
         ]
@@ -334,20 +342,33 @@ viewTierLinks : Int -> Html Msg
 viewTierLinks x =
     div [] (map viewTierLink (L.range 1 x))
 
+
 viewTierLink : Int -> Html Msg
-viewTierLink i = div [] [a [ onClick <| ClickTier i ] [ tierText i]]
+viewTierLink i =
+    div [] [ a [ onClick <| ClickTier i ] [ tierText i ] ]
+
 
 tierText : Int -> Html Msg
-tierText i = text ("Tier " ++ fromInt i)
+tierText i =
+    text ("Tier " ++ fromInt i)
 
-fancy : List Word -> List Block -> Html Msg
-fancy xs xxs =
+
+viewWords : List Block -> List Word -> Html Msg
+viewWords blocks words =
+    div [ class "words" ] <| L.map (viewWord blocks) words
+
+
+viewWord : List Block -> Word -> Html Msg
+viewWord blocks word =
     let
-        at : Word -> String
-        at w =
-           M.withDefault "" <| M.map (blockToString) <| L.head <| L.filter (hasWord w) xxs
+        grammarPlace : Word -> String
+        grammarPlace w =
+            L.filter (hasWord w) blocks
+                |> L.head
+                |> M.map blockToString
+                |> M.withDefault ""
     in
-    div [ class "words" ] (L.map (\word -> (\i -> span [ class i ] [ text <| (wordToString word) ++ " " ]) <| at word) xs)
+    span [ class (grammarPlace word) ] [ text (wordToString word ++ " ") ]
 
 
 
