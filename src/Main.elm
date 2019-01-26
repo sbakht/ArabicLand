@@ -1,11 +1,12 @@
 module Main exposing (Block(..), Model, Msg(..), init, main, update, view)
 
 import Browser
-import Html exposing (Html, a, div, h1, img, span, text, p)
+import Html exposing (Html, a, div, h1, img, p, span, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import List as L exposing (drop, head, map, tail)
 import Maybe as M
+import Queue exposing (Queue, dequeue, emptyQueue, enqueue, mapQ)
 import String exposing (fromInt)
 
 
@@ -70,36 +71,7 @@ wordsArr =
 
 
 y1 =
-    Nominal (Mubtada <| mkWordW 1 "he") (Kabr (Verbal (Fil <| mkWordW 2 "resisted") (Fial <| mkImplicitWordW 2 "hidden he") (MB <| Nominal (mkWordW 3 "the door") (mkWordW 4 "of the house" ))))
-
-
-type Queue a
-    = Queue (List a)
-
-
-initQueue : a -> Queue a
-initQueue a =
-    enqueue a (Queue [])
-
-
-emptyQueue : Queue a
-emptyQueue =
-    Queue []
-
-
-mapQ : (List a -> List a) -> Queue a -> Queue a
-mapQ fn (Queue xs) =
-    Queue (fn xs)
-
-
-enqueue : a -> Queue a -> Queue a
-enqueue x q =
-    mapQ (\xs -> L.append xs [ x ]) q
-
-
-dequeue : Queue a -> ( Maybe a, Queue a )
-dequeue (Queue xs) =
-    ( head xs, Queue (drop 1 xs) )
+    Nominal (Mubtada <| mkWordW 1 "he") (Kabr (Verbal (Fil <| mkWordW 2 "resisted") (Fial <| mkImplicitWordW 2 "hidden he") (MB <| Nominal (mkWordW 3 "the door") (mkWordW 4 "of the house"))))
 
 
 enqueueBlock : Block -> Queue Block -> Queue Block
@@ -157,11 +129,12 @@ bFS fn block =
                         b ->
                             go (enqueueBlock b q2)
 
-                ( Nothing, Queue [] ) ->
-                    []
-
                 ( Nothing, q2 ) ->
-                    go q2
+                    if q2 == emptyQueue then
+                        []
+
+                    else
+                        go q2
     in
     go (enqueueBlock block emptyQueue)
 
@@ -323,6 +296,7 @@ wordsFrom block =
     bFS (\a -> a) block
 
 
+
 ---- VIEW ----
 
 
@@ -372,14 +346,20 @@ viewWord blocks word =
 
 
 viewBreakdown : List Block -> Html Msg
---viewBreakdown blocks = div [] (L.intersperse (text " ") (L.map viewBasicWords blocks) ++ L.map viewPhraseBreak blocks)
-viewBreakdown blocks = div [] (viewWords blocks (L.concat <| L.map wordsFrom blocks) :: L.map viewPhraseBreak blocks)
+viewBreakdown blocks =
+    div [] (viewWords blocks (L.concat <| L.map wordsFrom blocks) :: L.map viewPhraseBreak blocks)
+
 
 viewPhraseBreak : Block -> Html Msg
-viewPhraseBreak block = div [] [span [class "bold"] [text (blockToString block ++ ": ")], viewBasicWords block]
+viewPhraseBreak block =
+    div [] [ span [ class "bold" ] [ text (blockToString block ++ ": ") ], viewBasicWords block ]
+
 
 viewBasicWords : Block -> Html Msg
-viewBasicWords block = span [] [text (String.join " " <| L.map wordToString <| wordsFrom block )]
+viewBasicWords block =
+    span [] [ text (String.join " " <| L.map wordToString <| wordsFrom block) ]
+
+
 
 ---- PROGRAM ----
 
