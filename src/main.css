@@ -5,6 +5,10 @@ body {
   color: #293c4b;
 }
 
+p {
+    margin: 0;
+}
+
 h1 {
   font-size: 30px;
 }
@@ -34,6 +38,6 @@ img {
     font-size: 20px;
 }
 
-.h100 {
-    opacity: .5
+.bold {
+    font-weight:bold;
 }
