@@ -1,4 +1,4 @@
-module Queue exposing (Queue, dequeue, emptyQueue, enqueue, mapQ)
+module Queue exposing (Queue, dequeue, emptyQueue, enqueue)
 
 import List exposing (append, drop, head)
 
