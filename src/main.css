@@ -14,24 +14,20 @@ img {
   max-width: 200px;
 }
 
-.h0 {
+.Mubtada, .Kabr {
     color: green;
 }
 
-.h1 {
-    color: blue;
+.Kabr, .Mafoo_bihi {
+    font-weight:bold
 }
 
-.h2 {
+.Fil, .Fial, .Mafoo_bihi {
     color: red;
 }
 
-.h3 {
-    color: yellow;
-}
-
-.hi {
-    color: green
+.Fial {
+    font-style: italic;
 }
 
 .words {

@@ -5,6 +5,7 @@ import Html exposing (Html, a, div, h1, img, span, text)
 import Html.Attributes exposing (class, src)
 import Html.Events exposing (onClick)
 import List as L exposing (drop, head, tail, map)
+import Maybe as M
 import String exposing (fromInt)
 
 
@@ -29,35 +30,45 @@ type Word
     | ConnectorWord {id: Int, text: String}
 
 
---mkWord : Int -> String  -> Block
---mkWord id text =
---    Word << NormalWord {id = i}
---
---
---mkImplicitWord : String -> Block
---mkImplicitWord =
---    Word << HiddenWord
---
---
---mkConnectorWord : String -> Block
---mkConnectorWord =
---    Word << ConnectorWord
+mkWord : Int -> String  -> Word
+mkWord id text =
+    NormalWord {id = id, text = text}
+
+
+mkImplicitWord : Int -> String -> Word
+mkImplicitWord id text =
+    HiddenWord {id = id, text = text}
+
+mkWordW : Int -> String  -> Block
+mkWordW id text =
+    Word <| NormalWord {id = id, text = text}
+
+
+mkImplicitWordW : Int -> String -> Block
+mkImplicitWordW id text=
+    Word <| HiddenWord {id = id, text = text}
+
+
+mkConnectorWordW : Int -> String -> Block
+mkConnectorWordW id text=
+    Word <| ConnectorWord {id = id, text = text}
 
 
 z =
     "he is cool"
 
 
-z1 =
-    Nominal (Mubtada <| mkWord "he") (Kabr <| mkWord "cool")
+--z1 =
+--    Nominal (Mubtada <| mkWord "he") (Kabr <| mkWord "cool")
 
 
 
 --y = "he resisted the fluff"
 
+wordsArr = [mkWord 1 "he", mkWord 2 "resisted", mkImplicitWord 2 "hidden he", mkWord 3 "the fluff"]
 
 y1 =
-    Nominal (Mubtada <| Word <| NormalWord 1 "he") (Kabr (Verbal (Fil <| Word <| NormalWord 2 "resisted") (Fial <| Word <| HiddenWord 3 "hidden he") (MB <| mkWord "the fluff")))
+    Nominal (Mubtada <| mkWordW 1 "he") (Kabr (Verbal (Fil <| mkWordW 2 "resisted") (Fial <| mkImplicitWordW 2 "hidden he") (MB <| mkWordW 3 "the fluff")))
 
 
 type Queue a
@@ -130,16 +141,16 @@ wordToString word =
             "CONNECTOR"
 
 
-bFS : Block -> List String
-bFS block =
+bFS : (Word -> a) -> Block -> List a
+bFS fn block =
     let
-        go : Queue Block -> List String
+        go : Queue Block -> List a
         go q =
             case dequeue q of
                 ( Just dequeued, q2 ) ->
                     case dequeued of
                         Word word ->
-                            wordToString word :: go q2
+                            fn word :: go q2
 
                         b ->
                             go (enqueueBlock b q2)
@@ -152,6 +163,33 @@ bFS block =
     in
     go (enqueueBlock block emptyQueue)
 
+
+hasWord : Word -> Block -> Bool
+hasWord word block =
+    case block of
+        Nominal b1 b2 ->
+            hasWord word b1 || hasWord word b2
+
+        Verbal b1 b2 b3 ->
+            hasWord word b1 || hasWord word b2 || hasWord word b3
+
+        Fil b ->
+            hasWord word b
+
+        Fial b ->
+            hasWord word b
+
+        Mubtada b ->
+            hasWord word b
+
+        Kabr b ->
+            hasWord word b
+
+        MB b ->
+            hasWord word b
+
+        Word w ->
+           word == w
 
 height : Block -> Int
 height block =
@@ -197,7 +235,7 @@ blockToString block =
             "Fial"
 
         MB _ ->
-            "Mafoo bihi"
+            "Mafoo_bihi"
 
         Nominal _ _ ->
             "Nominal"
@@ -272,7 +310,10 @@ update msg model =
             ( model, Cmd.none )
 
 stringsEachSection : Int -> Block -> List (List String)
-stringsEachSection depth block = map (\x -> blockToString x :: bFS x) <| blocksAtHeight depth block
+stringsEachSection depth block = map (\x -> blockToString x :: bFS wordToString x) <| blocksAtHeight depth block
+
+wordsEachSection : Int -> Block -> List (List Word)
+wordsEachSection depth block = map (\x -> bFS (\a -> a) x) <| blocksAtHeight depth block
 
 ---- VIEW ----
 
@@ -281,8 +322,9 @@ view : Model -> Html Msg
 view {depth, block1} =
     div []
         [ img [ src "/logo.svg" ] []
-        , div [] [ text (Debug.toString <| bFS block1) ]
-        , fancy (bFS block1) <| stringsEachSection depth block1
+        , div [] [ text (Debug.toString <| bFS wordToString block1) ]
+        --, fancy (wordsArr) <| wordsEachSection depth block1
+        , fancy (wordsArr) <| blocksAtHeight depth block1
         , text << Debug.toString <| stringsEachSection depth block1
         , viewTierLinks (height block1)
         ]
@@ -298,14 +340,14 @@ viewTierLink i = div [] [a [ onClick <| ClickTier i ] [ tierText i]]
 tierText : Int -> Html Msg
 tierText i = text ("Tier " ++ fromInt i)
 
-fancy : List String -> List (List String) -> Html Msg
+fancy : List Word -> List Block -> Html Msg
 fancy xs xxs =
     let
-        at : String -> Int
-        at s =
-            Maybe.withDefault 100 <| L.head <| L.map (\( i, x ) -> i) <| L.filter (\( i, x ) -> L.member s x) <| L.indexedMap (\i x -> ( i, x )) xxs
+        at : Word -> String
+        at w =
+           M.withDefault "" <| M.map (blockToString) <| L.head <| L.filter (hasWord w) xxs
     in
-    div [ class "words" ] (L.map (\s -> (\i -> span [ class <| "h" ++ i ] [ text <| s ++ " " ]) << fromInt <| at s) xs)
+    div [ class "words" ] (L.map (\word -> (\i -> span [ class i ] [ text <| (wordToString word) ++ " " ]) <| at word) xs)
 
 
 
