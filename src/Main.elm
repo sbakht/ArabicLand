@@ -1,6 +1,5 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
-import Block exposing (Block, bFS, blockToString, blocksAtHeight, hasWord, height, testData)
 import Browser
 import Html exposing (Html, a, div, img, span, text)
 import Html.Attributes exposing (class, src)
@@ -8,6 +7,7 @@ import Html.Events exposing (onClick)
 import List as L exposing (map)
 import Maybe as M
 import String exposing (fromInt)
+import Block exposing (Block, bFS, blockToString, blocksAtHeight, hasWord, height, testData)
 import Word exposing (Word, mkImplicitWord, mkWord, wordToString)
 
 

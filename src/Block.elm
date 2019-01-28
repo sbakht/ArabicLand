@@ -1,5 +1,7 @@
 module Block exposing (Block, bFS, blockToString, blocksAtHeight, enqueueBlock, hasWord, height, mkImplicitWordW, mkWordW, testData)
 
+import List exposing (any, append, concat, foldl, foldr, map, maximum, member)
+import Maybe exposing (withDefault)
 import Queue exposing (Queue, dequeue, emptyQueue, enqueue)
 import Word exposing (Word, mkImplicitWord, mkWord)
 
@@ -13,10 +15,11 @@ type Block
     | Mubtada Block
     | Kabr Block
     | MB Block
+    | Placeholder (List Block)
 
 
 testData =
-    Nominal (Mubtada <| mkWordW 1 "he") (Kabr (Verbal (Fil <| mkWordW 2 "resisted") (Fial <| mkImplicitWordW 2 "hidden he") (MB <| Nominal (mkWordW 3 "the door") (mkWordW 4 "of the house"))))
+    Nominal (Mubtada <| mkWordW 1 "he") (Kabr (Verbal (Fil <| mkWordW 2 "resisted") (Fial <| mkImplicitWordW 2 "hidden he") (MB <| Placeholder [(mkWordW 3 "the door"), (mkWordW 4 "of the house")])))
 
 
 mkWordW : Int -> String -> Block
@@ -62,15 +65,21 @@ enqueueBlock x q =
         Word w ->
             enqueue (Word w) q
 
+        Placeholder ws ->
+            foldl (\w qu -> enqueue w qu) q ws
+
 
 height : Block -> Int
 height block =
     case block of
         Nominal b1 b2 ->
-            0 + max (height b1) (height b2)
+            max (height b1) (height b2)
 
         Verbal b1 b2 b3 ->
-            0 + max (height b3) (max (height b1) (height b2))
+            max (height b3) (max (height b1) (height b2))
+
+        Placeholder bs ->
+            withDefault 0 <| maximum (map height bs)
 
         Fil b ->
             1 + height b
@@ -117,6 +126,8 @@ blockToString block =
 
         Word _ ->
             "Word"
+        Placeholder _ ->
+            "PLACEHOLDER"
 
 
 blocksAtHeight : Int -> Block -> List Block
@@ -129,6 +140,9 @@ blocksAtHeight height1 bl =
 
                 ( _, Verbal b1 b2 b3 ) ->
                     go h b1 ++ go h b2 ++ go h b3
+
+                (_, Placeholder bs) ->
+                    foldr (\b accum -> append (go h b) accum) [] bs
 
                 ( _, Word _ ) ->
                     []
@@ -204,3 +218,7 @@ hasWord word block =
 
         Word w ->
             word == w
+
+        Placeholder ws ->
+            any (hasWord word) ws
+
