@@ -7,7 +7,7 @@ import Html.Events exposing (onClick)
 import List as L exposing (map)
 import Maybe as M
 import String exposing (fromInt)
-import Block exposing (Block, bFS, blockToString, blocksAtHeight, hasWord, height, testData)
+import Block exposing (Block, bFS, blockToString, blocksAtHeight, hasWord, height, insert, mkImplicitWordW, mkPlaceholder, mkWordW, testData)
 import Word exposing (Word, mkImplicitWord, mkWord, wordToString)
 
 
@@ -20,8 +20,8 @@ wordsArr =
 
 
 y1 =
-    testData
-
+--    testData
+    mkPlaceholder [ mkWordW 1 "he", mkWordW 2 "resisted", mkImplicitWordW 2 "hidden he", mkWordW 3 "the door", mkWordW 4 "of the house" ]
 
 type alias Model =
     { block1 : Block, depth : Int }
@@ -39,6 +39,7 @@ init =
 type Msg
     = NoOp
     | ClickTier Int
+    | SetGrammar Word
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -49,6 +50,8 @@ update msg model =
 
         NoOp ->
             ( model, Cmd.none )
+        SetGrammar word ->
+           ({model | block1 = insert word (mkPlaceholder []) model.block1}, Cmd.none)
 
 
 stringsEachSection : Int -> Block -> List (List String)
@@ -107,7 +110,7 @@ viewWord blocks word =
                 |> M.map blockToString
                 |> M.withDefault ""
     in
-    span [ class (grammarPlace word) ] [ text (wordToString word ++ " ") ]
+    span [ class (grammarPlace word), onClick (SetGrammar word) ] [ text (wordToString word ++ " ") ]
 
 
 viewBreakdown : List Block -> Html Msg

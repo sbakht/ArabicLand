@@ -1,4 +1,4 @@
-module Block exposing (Block, bFS, blockToString, blocksAtHeight, enqueueBlock, hasWord, height, mkImplicitWordW, mkWordW, testData)
+module Block exposing (Block, bFS, blockToString, blocksAtHeight, enqueueBlock, hasWord, height, mkImplicitWordW, mkWordW, testData, mkPlaceholder, insert)
 
 import List exposing (any, append, concat, foldl, foldr, map, maximum, member)
 import Maybe exposing (withDefault)
@@ -19,8 +19,10 @@ type Block
 
 
 testData =
-    Nominal (Mubtada <| mkWordW 1 "he") (Kabr (Verbal (Fil <| mkWordW 2 "resisted") (Fial <| mkImplicitWordW 2 "hidden he") (MB <| Placeholder [(mkWordW 3 "the door"), (mkWordW 4 "of the house")])))
+    Nominal (Mubtada <| mkWordW 1 "he") (Kabr (Verbal (Fil <| mkWordW 2 "resisted") (Fial <| mkImplicitWordW 2 "hidden he") (MB <| Placeholder [(Mubtada <| mkWordW 3 "the door"), (Kabr <| mkWordW 4 "of the house")])))
 
+mkPlaceholder : List Block -> Block
+mkPlaceholder = Placeholder
 
 mkWordW : Int -> String -> Block
 mkWordW id text =
@@ -79,7 +81,7 @@ height block =
             max (height b3) (max (height b1) (height b2))
 
         Placeholder bs ->
-            withDefault 0 <| maximum (map height bs)
+            withDefault 1 <| maximum (map height bs)
 
         Fil b ->
             1 + height b
@@ -221,4 +223,47 @@ hasWord word block =
 
         Placeholder ws ->
             any (hasWord word) ws
+
+insert : Word -> Block -> Block -> Block
+insert word block main =
+    if block == main || Word word == main then
+        Debug.log "hmm" <| addWord word block
+    else
+        case main of
+            Nominal b1 b2 ->
+                Nominal ( insert word block b1) ( insert word block b2)
+
+            Verbal b1 b2 b3 ->
+                Verbal ( insert word block b1) ( insert word block b2) ( insert word block b3)
+
+            Fil b ->
+                Fil <| insert word block b
+
+            Fial b ->
+                Fial <| insert word block b
+
+            Mubtada b ->
+                Mubtada <| insert word block b
+
+            Kabr b ->
+                Kabr <| insert word block b
+
+            MB b ->
+                MB <| insert word block b
+
+            Word w ->
+                Word w
+
+            Placeholder ws ->
+                Placeholder (map (insert word block) ws)
+
+addWord : Word -> Block -> Block
+addWord word block =
+    case block of
+        Placeholder ws ->
+            Placeholder (Word word :: ws)
+
+        x ->
+            Placeholder [Word word, x]
+
 
