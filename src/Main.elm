@@ -1,4 +1,4 @@
-module Main exposing (Model, Msg(..), init, main, update, view)
+module Main exposing (Model, Msg(..), init, update, view)
 
 import Browser
 import Html exposing (Html, a, div, img, span, text)
@@ -9,6 +9,7 @@ import Maybe as M
 import String exposing (fromInt)
 import Block exposing (Block, bFS, blockToString, blocksAtHeight, hasWord, height, insert, mkImplicitWordW, mkPlaceholder, mkWordW, testData)
 import Word exposing (Word, mkImplicitWord, mkWord, wordToString)
+
 
 
 
@@ -27,9 +28,9 @@ type alias Model =
     { block1 : Block, depth : Int }
 
 
-init : ( Model, Cmd Msg )
+init : Model
 init =
-    ( { block1 = y1, depth = 2 }, Cmd.none )
+     { block1 = y1, depth = 2 }
 
 
 
@@ -127,16 +128,3 @@ viewBasicWords : Block -> Html Msg
 viewBasicWords block =
     span [] [ text (String.join " " <| L.map wordToString <| wordsFrom block) ]
 
-
-
----- PROGRAM ----
-
-
-main : Program () Model Msg
-main =
-    Browser.element
-        { view = view
-        , init = \_ -> init
-        , update = update
-        , subscriptions = always Sub.none
-        }

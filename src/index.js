@@ -1,9 +1,10 @@
 import './main.css';
-import { Elm } from './Main.elm';
+import { Elm } from './App.elm';
 import registerServiceWorker from './registerServiceWorker';
 
-Elm.Main.init({
-  node: document.getElementById('root')
+Elm.App.init({
+  node: document.getElementById('root'),
+  flags: "ch1"
 });
 
 registerServiceWorker();
