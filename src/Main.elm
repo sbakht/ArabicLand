@@ -1,5 +1,6 @@
 module Main exposing (Model, Msg(..), init, update, view)
 
+import Block exposing (Block, bFS, blockToString, blocksAtHeight, hasWord, height, insert, mkImplicitWordW, mkPlaceholder, mkWordW, testData)
 import Browser
 import Html exposing (Html, a, div, img, span, text)
 import Html.Attributes exposing (class, src)
@@ -7,9 +8,7 @@ import Html.Events exposing (onClick)
 import List as L exposing (map)
 import Maybe as M
 import String exposing (fromInt)
-import Block exposing (Block, bFS, blockToString, blocksAtHeight, hasWord, height, insert, mkImplicitWordW, mkPlaceholder, mkWordW, testData)
 import Word exposing (Word, mkImplicitWord, mkWord, wordToString)
-
 
 
 
@@ -21,8 +20,9 @@ wordsArr =
 
 
 y1 =
---    testData
+    --    testData
     mkPlaceholder [ mkWordW 1 "he", mkWordW 2 "resisted", mkImplicitWordW 2 "hidden he", mkWordW 3 "the door", mkWordW 4 "of the house" ]
+
 
 type alias Model =
     { block1 : Block, depth : Int }
@@ -30,7 +30,7 @@ type alias Model =
 
 init : Model
 init =
-     { block1 = y1, depth = 2 }
+    { block1 = y1, depth = 2 }
 
 
 
@@ -51,8 +51,9 @@ update msg model =
 
         NoOp ->
             ( model, Cmd.none )
+
         SetGrammar word ->
-           ({model | block1 = insert word (mkPlaceholder []) model.block1}, Cmd.none)
+            ( { model | block1 = insert word (mkPlaceholder []) model.block1 }, Cmd.none )
 
 
 stringsEachSection : Int -> Block -> List (List String)
@@ -127,4 +128,3 @@ viewPhraseBreak block =
 viewBasicWords : Block -> Html Msg
 viewBasicWords block =
     span [] [ text (String.join " " <| L.map wordToString <| wordsFrom block) ]
-
