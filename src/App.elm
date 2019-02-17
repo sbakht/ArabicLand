@@ -59,6 +59,8 @@ updatePage page msg model =
     case ( msg, page ) of
         ( GrammarMsg subMsg, GrammarModel subModel ) ->
             toPage GrammarModel GrammarMsg Grammar.update subMsg subModel
+        ( Ch1Msg subMsg, Ch1Model subModel ) ->
+            toPage Ch1Model Ch1Msg Ch1.update subMsg subModel
 
         ( _, _ ) ->
             ( model, Cmd.none )

@@ -41,3 +41,20 @@ img {
 .bold {
     font-weight:bold;
 }
+
+
+.apply-selected {
+    border: 1px solid black !important
+}
+
+.apply-ism {
+    color: green !important
+}
+
+.apply-fil {
+    color: red !important
+}
+
+.apply-harf {
+    color: blue !important
+}
