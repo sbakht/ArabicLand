@@ -34,7 +34,7 @@ if (fs.existsSync('elm.json') === false) {
 }
 
 // Warn and crash if required files are missing
-if (!checkRequiredFiles([paths.appIndexJs, paths.appHtml])) {
+if (!checkRequiredFiles([paths.appIndexJs])) {
   process.exit(1);
 }
 
@@ -124,6 +124,5 @@ function build(previousFileSizes) {
 function copyPublicFolder() {
   fs.copySync(paths.appPublic, paths.appBuild, {
     dereference: true,
-    filter: file => file !== paths.appHtml
   });
 }
