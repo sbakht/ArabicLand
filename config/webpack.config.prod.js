@@ -1,6 +1,7 @@
 'use strict';
 
 const autoprefixer = require('autoprefixer');
+const fs = require('fs');
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -280,22 +281,7 @@ module.exports = {
   },
   plugins: [
     // Generates an `index.html` file with the <script> injected.
-    new HtmlWebpackPlugin({
-      inject: true,
-      template: paths.appHtml,
-      minify: {
-        removeComments: true,
-        collapseWhitespace: true,
-        removeRedundantAttributes: true,
-        useShortDoctype: true,
-        removeEmptyAttributes: true,
-        removeStyleLinkTypeAttributes: true,
-        keepClosingSlash: true,
-        minifyJS: true,
-        minifyCSS: true,
-        minifyURLs: true
-      }
-    }),
+    ...getHtmlFiles(),
     // Makes some environment variables available in index.html.
     // The public URL is available as %PUBLIC_URL% in index.html, e.g.:
     // <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico">
@@ -365,3 +351,62 @@ module.exports = {
   // our own hints via the FileSizeReporter
   performance: false
 };
+
+function fromDir(startPath,filter,callback){
+
+    //console.log('Starting from dir '+startPath+'/');
+
+    if (!fs.existsSync(startPath)){
+        console.log("no dir ",startPath);
+        return;
+    }
+
+    var files=fs.readdirSync(startPath);
+    for(var i=0;i<files.length;i++){
+        var filename=path.join(startPath,files[i]);
+        var stat = fs.lstatSync(filename);
+        if (stat.isDirectory()){
+            fromDir(filename,filter,callback); //recurse
+        }
+        else if (filter.test(filename)) callback(filename);
+    };
+};
+
+
+function buildHtmlPlugin(template, filename) {
+    return new HtmlWebpackPlugin({
+      inject: true,
+      template: template,
+      filename: filename,
+      minify: {
+        removeComments: true,
+        collapseWhitespace: true,
+        removeRedundantAttributes: true,
+        useShortDoctype: true,
+        removeEmptyAttributes: true,
+        removeStyleLinkTypeAttributes: true,
+        keepClosingSlash: true,
+        minifyJS: true,
+        minifyCSS: true,
+        minifyURLs: true
+      }
+    });
+}
+
+function getDelim(path) {
+    if(path.indexOf('/') > -1) {
+        return '/';
+    }
+    return '\\';
+}
+
+function getHtmlFiles() {
+    const arr = [];
+    fromDir('./src/pages',/\.html$/,function(path){
+        console.log(path);
+        const split = path.split(getDelim(path));
+        const filename = split[split.length - 1];
+        arr.push(buildHtmlPlugin(path, filename));
+    });
+    return arr;
+}
