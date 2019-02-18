@@ -227,7 +227,8 @@ hasWord word block =
 insert : Word -> Block -> Block -> Block
 insert word block main =
     if block == main || Word word == main then
-        Debug.log "hmm" <| addWord word block
+--        Debug.log "hmm" <| addWord word block
+        addWord word block
     else
         case main of
             Nominal b1 b2 ->

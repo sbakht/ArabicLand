@@ -74,9 +74,9 @@ view : Model -> Html Msg
 view { depth, block1 } =
     div []
         [ img [ src "/logo.svg" ] []
-        , div [] [ text (Debug.toString <| bFS wordToString block1) ]
+--        , div [] [ text (Debug.toString <| bFS wordToString block1) ]
         , viewWords (blocksAtHeight depth block1) wordsArr
-        , text << Debug.toString <| stringsEachSection depth block1
+--        , text << Debug.toString <| stringsEachSection depth block1
         , viewBreakdown (blocksAtHeight depth block1)
         , viewTierLinks (height block1)
         ]
