@@ -402,11 +402,11 @@ function getDelim(path) {
 
 function getHtmlFiles() {
     const arr = [];
-//    fromDir('./src/pages',/\.html$/,function(path){
-//        console.log(path);
-//        const split = path.split(getDelim(path));
-//        const filename = split[split.length - 1];
-//        arr.push(buildHtmlPlugin(path, filename));
-//    });
+    fromDir('./src/pages',/\.html$/,function(path){
+        console.log(path);
+        const split = path.split(getDelim(path));
+        const filename = split[split.length - 1];
+        arr.push(buildHtmlPlugin(path, filename));
+    });
     return arr;
 }
