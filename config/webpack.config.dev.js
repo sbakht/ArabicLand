@@ -8,6 +8,7 @@ const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
 const InterpolateHtmlPlugin = require('react-dev-utils/InterpolateHtmlPlugin');
 const getClientEnvironment = require('./env');
 const paths = require('../config/paths');
+const getHtmlFiles = require('../config/htmlFiles');
 
 // Webpack uses `publicPath` to determine where the app is being served from.
 // In development, we always serve from the root. This makes config easier.
@@ -239,10 +240,7 @@ module.exports = {
   },
   plugins: [
     // Generates an `index.html` file with the <script> injected.
-    new HtmlWebpackPlugin({
-      inject: true,
-      template: './src/pages/index.html'
-    }),
+    ...getHtmlFiles(buildHtmlPlugin),
     // Makes some environment variables available in index.html.
     // The public URL is available as %PUBLIC_URL% in index.html, e.g.:
     // <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico">
@@ -272,3 +270,11 @@ module.exports = {
   // our own hints via the FileSizeReporter
   performance: false
 };
+
+function buildHtmlPlugin(template, filename) {
+    return new HtmlWebpackPlugin({
+      inject: true,
+      template: template,
+      filename: filename,
+    });
+}
