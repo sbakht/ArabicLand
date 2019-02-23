@@ -1,6 +1,6 @@
 module Ch1 exposing (Answer(..), Model, Msg(..), Question(..), YourAnswer, black, blue, clearAnswer, clickState, color, green, init, isCorrect, isIncorrect, isNotAnswered, numCorrect, numQuestions, red, setAnswer, test, update, view, viewAnswerKey, viewButtons, viewQuestion, viewQuestionAnswer, viewQuestions, viewRestart, viewResultStatus, viewSubmit)
 
-import Element exposing (Attribute, Element, column, el, html, htmlAttribute, layout, none, paragraph, rgb, row, text)
+import Element exposing (Attribute, Element, centerX, column, el, fill, html, htmlAttribute, layout, none, paragraph, rgb, row, text, width)
 import Element.Events exposing (onClick)
 import Element.Font as Font
 import Element.Input exposing (button)
@@ -118,7 +118,7 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    layout [] (column [] [ viewQuestions model.questions viewQuestion, viewButtons model ])
+    layout [] (column [width fill] [ viewQuestions model.questions viewQuestion, el [centerX] <| viewButtons model ])
 
 
 viewQuestions : List Question -> (Question -> Html Msg) -> Element Msg
@@ -209,12 +209,12 @@ viewResultStatus qs =
 
 viewSubmit : Element Msg
 viewSubmit =
-    html <| Html.button [Html.Events.onClick OnSubmit] [Html.text "Check Answers"]
+    html <| Html.button [Html.Events.onClick OnSubmit, class "pure-button pure-button-primary"] [Html.text "Check Answers"]
 
 
 viewRestart : Element Msg
 viewRestart =
-    html <| Html.button [Html.Events.onClick OnRestart] [Html.text "Start Over"]
+    html <| Html.button [Html.Events.onClick OnRestart, class "pure-button button-warning"] [Html.text "Start Over"]
 
 
 classC s =
