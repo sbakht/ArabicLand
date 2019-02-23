@@ -1,9 +1,9 @@
 [[redirects]]
-  from = "/"
-  to = "/ch1.html"
+  from = "/*"
+  to = "/:splat.html"
   status = 200
 
 [[redirects]]
-  from = "/*"
-  to = "/:splat.html"
+  from = "/"
+  to = "/ch1.html"
   status = 200
