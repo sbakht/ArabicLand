@@ -1,6 +1,6 @@
 [[redirects]]
   from = "/"
-  to = "/index.html"
+  to = "/ch1.html"
   status = 200
 
 [[redirects]]
