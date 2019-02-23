@@ -1,3 +1,7 @@
+h1 {
+    margin: 1.8em 0;
+}
+
 img {
   margin: 20px 0;
   max-width: 200px;
@@ -42,4 +46,28 @@ img {
 
 .apply-harf {
     color: blue !important
+}
+
+button.pure-menu-link {
+    background:none!important;
+     border:none;
+     padding:0!important;
+
+    /*optional*/
+    font-family:arial,sans-serif; /*input has OS specific font-family*/
+     color:#069;
+     text-decoration:underline;
+     cursor:pointer;
+}
+
+.pure-menu-link {
+    cursor: pointer;
+}
+
+.question-chip {
+    color: rgba(0,0,0,.75);
+}
+
+.md-chip-icon.icon-unanswered {
+    background: #aaa;
 }

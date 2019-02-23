@@ -1,11 +1,12 @@
-module Ch1 exposing (Answer(..), Model, Msg(..), Question(..), YourAnswer, black, blue, class, classList, clearAnswer, clickState, color, green, init, isCorrect, isIncorrect, isNotAnswered, numCorrect, numQuestions, red, setAnswer, test, update, view, viewAnswerKey, viewApply, viewButtons, viewQuestion, viewQuestionAnswer, viewQuestions, viewRestart, viewResultStatus, viewSubmit)
+module Ch1 exposing (Answer(..), Model, Msg(..), Question(..), YourAnswer, black, blue, clearAnswer, clickState, color, green, init, isCorrect, isIncorrect, isNotAnswered, numCorrect, numQuestions, red, setAnswer, test, update, view, viewAnswerKey, viewButtons, viewQuestion, viewQuestionAnswer, viewQuestions, viewRestart, viewResultStatus, viewSubmit)
 
-import Element exposing (Attribute, Element, column, el, htmlAttribute, layout, none, paragraph, rgb, row, text)
+import Element exposing (Attribute, Element, column, el, html, htmlAttribute, layout, none, paragraph, rgb, row, text)
 import Element.Events exposing (onClick)
 import Element.Font as Font
 import Element.Input exposing (button)
-import Html exposing (Html)
-import Html.Attributes
+import Html exposing (Html, a, div, li, span, ul)
+import Html.Attributes exposing (class, classList)
+import Html.Events
 import String exposing (fromInt)
 
 
@@ -78,7 +79,7 @@ test =
 
 type Msg
     = SetApplying Answer
-    | OnAnswer Question
+    | OnAnswer Question YourAnswer
     | OnSubmit
     | OnRestart
 
@@ -89,13 +90,13 @@ update msg model =
         SetApplying a ->
             ( { model | apply = Just a }, Cmd.none )
 
-        OnAnswer question ->
+        OnAnswer question answer ->
             let
                 updateAnswers =
                     List.map
                         (\q ->
                             if q == question then
-                                setAnswer q model.apply
+                                setAnswer q answer
 
                             else
                                 q
@@ -117,23 +118,41 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    layout [] (column [] [ viewApply model.apply, viewQuestions model.questions viewQuestion, viewButtons model ])
+    layout [] (column [] [ viewQuestions model.questions viewQuestion, viewButtons model ])
 
 
-viewQuestions : List Question -> (Question -> Element Msg) -> Element Msg
+viewQuestions : List Question -> (Question -> Html Msg) -> Element Msg
 viewQuestions questions fn =
-    paragraph [] <| List.intersperse (text " ") <| List.map fn questions
+    html <| div [ class "pure-menu-horizontal"] <| [ul [] (List.map fn questions)]
 
 
-viewQuestion : Question -> Element Msg
+viewQuestion : Question -> Html Msg
 viewQuestion ((Question str _ a) as q) =
-    el [ onClick (OnAnswer q), color a ] (text str)
+    div [ class "pure-menu-item pure-menu-allow-hover"] [
+        span [ class "question-chip" ] [chip (answerSymbol a) str],
+        ul [ class "pure-menu-children"] (dropdownChoices q)
+    ]
+
+chip : String -> String -> Html Msg
+chip icon str = div [ class "md-chips"] [
+        div [ class "md-chip md-chip-hover md-chip-clickable"] [
+                div [ class "md-chip-icon", classList [("icon-unanswered", icon == "?")]] [Html.text icon],
+                Html.text str
+            ]
+    ]
+
+dropdownChoices : Question -> List (Html Msg)
+dropdownChoices q = List.map (dropdownItem q) [Ism, Fil, Harf]
+
+dropdownItem: Question -> Answer -> Html Msg
+dropdownItem q ans = li [class "pure-menu-item"] [a [Html.Events.onClick (OnAnswer q (Just ans)) , class "pure-menu-link"] [Html.text (answerToString ans)]]
 
 
 viewAnswerKey : List Question -> (Question -> Element Msg) -> Element Msg
 viewAnswerKey qs fn =
     if numCorrect qs < numQuestions qs then
-        column [] [ text "Answer Key", viewQuestions qs fn ]
+--        column [] [ text "Answer Key", viewQuestions qs fn ]
+        none
 
     else
         none
@@ -144,18 +163,30 @@ viewQuestionAnswer (Question str a _) =
     el [ color (Just a) ] (text str)
 
 
-viewApply : YourAnswer -> Element Msg
-viewApply ans =
-    row []
-        [ clickState "Ism" Ism ans
-        , clickState "Fil" Fil ans
-        , clickState "Harf" Harf ans
-        ]
+answerToString : Answer -> String
+answerToString answer = case answer of
+    Ism ->
+        "Ism"
+    Fil ->
+        "Fil"
+    Harf ->
+        "Harf"
+
+answerSymbol : YourAnswer -> String
+answerSymbol a = case a of
+    Just Ism ->
+        "I"
+    Just Fil ->
+        "F"
+    Just Harf ->
+        "H"
+    Nothing ->
+        "?"
 
 
 clickState : String -> Answer -> YourAnswer -> Element Msg
 clickState label answer yourAns =
-    el [ onClick (SetApplying answer), classList [ ( "apply-selected", Just answer == yourAns ) ], color (Just answer) ] (text label)
+    el [ onClick (SetApplying answer), classListC [ ( "apply-selected", Just answer == yourAns ) ], color (Just answer) ] (text label)
 
 
 viewButtons : Model -> Element Msg
@@ -178,26 +209,20 @@ viewResultStatus qs =
 
 viewSubmit : Element Msg
 viewSubmit =
-    button []
-        { onPress = Just OnSubmit
-        , label = text "Check Answers"
-        }
+    html <| Html.button [Html.Events.onClick OnSubmit] [Html.text "Check Answers"]
 
 
 viewRestart : Element Msg
 viewRestart =
-    button []
-        { onPress = Just OnRestart
-        , label = text "Start Over"
-        }
+    html <| Html.button [Html.Events.onClick OnRestart] [Html.text "Start Over"]
 
 
-class s =
+classC s =
     htmlAttribute (Html.Attributes.class s)
 
 
-classList s =
-    htmlAttribute (Html.Attributes.classList s)
+classListC s =
+    htmlAttribute (classList s)
 
 
 color : YourAnswer -> Attribute Msg
