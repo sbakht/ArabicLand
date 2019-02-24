@@ -1,4 +1,4 @@
-module Ch1 exposing (Answer(..), Model, Msg(..), Question(..), YourAnswer, black, blue, clearAnswer, clickState, color, green, init, isCorrect, isIncorrect, isNotAnswered, numCorrect, numQuestions, red, setAnswer, test, update, view, viewAnswerKey, viewButtons, viewQuestion, viewQuestionAnswer, viewQuestions, viewRestart, viewResultStatus, viewSubmit)
+module Ch1 exposing (Answer(..), Model, Msg(..), Question(..), YourAnswer, black, blue, clearAnswer, clickState, color, green, init, isCorrect, isIncorrect, isNotAnswered, numCorrect, numQuestions, red, setAnswer, update, view, viewAnswerKey, viewButtons, viewQuestion, viewQuestionAnswer, viewQuestions, viewRestart, viewResultStatus, viewSubmit)
 
 import Element exposing (Attribute, Element, centerX, column, el, fill, html, htmlAttribute, layout, none, paragraph, rgb, row, text, width)
 import Element.Events exposing (onClick)
@@ -7,6 +7,7 @@ import Element.Input exposing (button)
 import Html exposing (Html, a, div, li, span, ul)
 import Html.Attributes exposing (class, classList)
 import Html.Events
+import Json.Decode as Decode exposing (Decoder, Value, decodeValue, succeed)
 import String exposing (fromInt)
 
 
@@ -62,19 +63,29 @@ numQuestions : List Question -> Int
 numQuestions =
     List.length
 
+questionDecoder : Decoder (List Question)
+questionDecoder =  Decode.list (Decode.map2 (\s a -> Question s a Nothing)
+        (Decode.field "word" Decode.string)
+        (Decode.field "answer" answerDecoder)
+    )
 
-init : Model
-init =
-    { questions = test, apply = Nothing, submitted = False }
+answerDecoder : Decoder Answer
+answerDecoder = Decode.string
+    |> Decode.andThen (\str ->
+        case str of
+            "Ism" ->
+                Decode.succeed Ism
+            "Fil" ->
+                Decode.succeed Fil
+            "Harf" ->
+                Decode.succeed Harf
+            _ ->
+                Decode.fail "Invalid answer choice"
+    )
 
-
-test =
-    [ Question "We" Ism Nothing
-    , Question "invited" Fil Nothing
-    , Question "guests" Ism Nothing
-    , Question "for" Harf Nothing
-    , Question "dinner" Ism Nothing
-    ]
+init : Value -> Model
+init v =
+    { questions = Result.withDefault [] (decodeValue questionDecoder v), apply = Nothing, submitted = False }
 
 
 type Msg

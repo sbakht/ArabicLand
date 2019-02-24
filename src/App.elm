@@ -4,6 +4,7 @@ import Browser
 import Ch1
 import Ch2
 import Html exposing (Html, text)
+import Json.Decode exposing (Value)
 import Main as Grammar
 
 
@@ -24,12 +25,13 @@ type Page
     | GrammarModel Grammar.Model
     | Default Int
 
+type alias Flag = {ch: String, data: Value}
 
-init : String -> ( Model, Cmd Msg )
+init : Flag -> ( Model, Cmd Msg )
 init chapter =
-    case chapter of
+    case chapter.ch of
         "ch1" ->
-            ( { page = Ch1Model Ch1.init }, Cmd.none )
+            ( { page = Ch1Model <| Ch1.init chapter.data }, Cmd.none )
 
         "ch2" ->
             ( { page = Ch2Model Ch2.init }, Cmd.none )
@@ -82,7 +84,7 @@ view model =
             text ""
 
 
-main : Program String Model Msg
+main : Program Flag Model Msg
 main =
     Browser.element
         { view = view
