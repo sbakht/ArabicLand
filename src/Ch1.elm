@@ -8,11 +8,12 @@ import Html exposing (Html, a, div, li, span, ul)
 import Html.Attributes exposing (class, classList)
 import Html.Events
 import Json.Decode as Decode exposing (Decoder, Value, decodeValue, succeed)
+import List exposing (concat)
 import String exposing (fromInt)
 
 
 type alias Model =
-    { questions : List Question, apply : Maybe Answer, submitted : Bool }
+    { questions : List Questions, apply : Maybe Answer, submitted : Bool }
 
 
 type Answer
@@ -24,6 +25,7 @@ type Answer
 type alias YourAnswer =
     Maybe Answer
 
+type alias Questions = List Question
 
 type Question
     = Question String Answer YourAnswer
@@ -54,17 +56,17 @@ clearAnswer q =
     setAnswer q Nothing
 
 
-numCorrect : List Question -> Int
+numCorrect : List Questions -> Int
 numCorrect =
-    List.length << List.filter (\x -> x) << List.map isCorrect
+    List.length << List.filter (\x -> x) << List.map isCorrect << concat
 
 
-numQuestions : List Question -> Int
+numQuestions : List Questions -> Int
 numQuestions =
-    List.length
+    List.length << concat
 
-questionDecoder : Decoder (List Question)
-questionDecoder =  Decode.list (Decode.map2 (\s a -> Question s a Nothing)
+questionDecoder : Decoder (List (List Question))
+questionDecoder =  Decode.list (Decode.list <| Decode.map2 (\s a -> Question s a Nothing)
         (Decode.field "word" Decode.string)
         (Decode.field "answer" answerDecoder)
     )
@@ -105,12 +107,13 @@ update msg model =
             let
                 updateAnswers =
                     List.map
-                        (\q ->
+                        (List.map (\q ->
                             if q == question then
                                 setAnswer q answer
 
                             else
                                 q
+                            )
                         )
                         model.questions
             in
@@ -122,7 +125,7 @@ update msg model =
         OnRestart ->
             let
                 resetAnswers =
-                    List.map clearAnswer model.questions
+                    List.map (List.map clearAnswer) model.questions
             in
             ( { model | questions = resetAnswers, submitted = False, apply = Nothing }, Cmd.none )
 
@@ -132,9 +135,9 @@ view model =
     layout [] (column [width fill] [ viewQuestions model.questions viewQuestion, el [centerX] <| viewButtons model ])
 
 
-viewQuestions : List Question -> (Question -> Html Msg) -> Element Msg
+viewQuestions : List Questions -> (Question -> Html Msg) -> Element Msg
 viewQuestions questions fn =
-    html <| div [ class "pure-menu-horizontal"] <| [ul [] (List.map fn questions)]
+    html <| div [] <| List.map (\q -> div [ class "pure-menu-horizontal"] <| [ul [] (List.map fn q)]) questions
 
 
 viewQuestion : Question -> Html Msg
@@ -159,7 +162,7 @@ dropdownItem: Question -> Answer -> Html Msg
 dropdownItem q ans = li [class "pure-menu-item"] [a [Html.Events.onClick (OnAnswer q (Just ans)) , class "pure-menu-link"] [Html.text (answerToString ans)]]
 
 
-viewAnswerKey : List Question -> (Question -> Element Msg) -> Element Msg
+viewAnswerKey : List Questions -> (Question -> Element Msg) -> Element Msg
 viewAnswerKey qs fn =
     if numCorrect qs < numQuestions qs then
 --        column [] [ text "Answer Key", viewQuestions qs fn ]
@@ -204,8 +207,8 @@ viewButtons : Model -> Element Msg
 viewButtons model =
     if model.submitted then
         column []
-            [ viewAnswerKey model.questions viewQuestionAnswer
-            , viewRestart
+            [ --viewAnswerKey model.questions viewQuestionAnswer
+              viewRestart
             , viewResultStatus model.questions
             ]
 
@@ -213,7 +216,7 @@ viewButtons model =
         viewSubmit
 
 
-viewResultStatus : List Question -> Element Msg
+viewResultStatus : List Questions -> Element Msg
 viewResultStatus qs =
     text ("You got " ++ fromInt (numCorrect qs) ++ "/" ++ fromInt (numQuestions qs) ++ " correct.")
 
