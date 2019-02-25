@@ -75,11 +75,11 @@ answerDecoder : Decoder Answer
 answerDecoder = Decode.string
     |> Decode.andThen (\str ->
         case str of
-            "Ism" ->
-                Decode.succeed Ism
-            "Fil" ->
+            "I" ->
+               Decode.succeed Ism
+            "F" ->
                 Decode.succeed Fil
-            "Harf" ->
+            "H" ->
                 Decode.succeed Harf
             _ ->
                 Decode.fail "Invalid answer choice"

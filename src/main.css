@@ -48,6 +48,10 @@ img {
     color: blue !important
 }
 
+.pure-menu-horizontal {
+    white-space: initial;
+}
+
 .pure-menu-horizontal > ul {
     padding: 0;
 }
