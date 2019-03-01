@@ -200,11 +200,7 @@ Elm.App.init({
                 answer: 'I'
             },
             {
-                word: 'will',
-                answer: 'I'
-            },
-            {
-                word: 'remind',
+                word: 'will remind',
                 answer: 'F'
             },
             {
