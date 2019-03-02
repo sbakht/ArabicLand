@@ -13,7 +13,7 @@ import String exposing (fromInt)
 
 
 type alias Model =
-    { questions : List Questions, apply : Maybe Answer, submitted : Bool }
+    { questions : List Sentence, apply : Maybe Answer, submitted : Bool }
 
 
 type Answer
@@ -30,56 +30,77 @@ type alias Submitted =
     Bool
 
 
-type alias Questions =
-    List Question
+type alias Sentence =
+    List Word
 
 
-type Question
+type Word
     = Question String Answer YourAnswer
+    | Text String
 
 
-isCorrect : Question -> Bool
-isCorrect (Question _ a a1) =
-    Just a == a1
+isCorrect : Word -> Maybe Bool
+isCorrect w =
+    case w of
+        Question _ a a1 ->
+            Just <| Just a == a1
+
+        Text _ ->
+            Nothing
 
 
-isIncorrect : Question -> Bool
-isIncorrect =
-    not << isCorrect
+setAnswer : Word -> YourAnswer -> Word
+setAnswer w ans =
+    case w of
+        Question s a _ ->
+            Question s a ans
+
+        Text s ->
+            Text s
 
 
-isNotAnswered : Question -> Bool
-isNotAnswered (Question _ _ a1) =
-    a1 == Nothing
-
-
-setAnswer : Question -> YourAnswer -> Question
-setAnswer (Question s a _) ans =
-    Question s a ans
-
-
-clearAnswer : Question -> Question
+clearAnswer : Word -> Word
 clearAnswer q =
     setAnswer q Nothing
 
 
-numCorrect : List Questions -> Int
+numCorrect : List Sentence -> Int
 numCorrect =
-    List.length << List.filter (\x -> x) << List.map isCorrect << concat
+    List.length << List.filter (\x -> x) << List.filterMap isCorrect << concat
 
 
-numQuestions : List Questions -> Int
+numQuestions : List Sentence -> Int
 numQuestions =
-    List.length << concat
+    List.length << List.filter isQuestion << concat
 
 
-questionDecoder : Decoder (List (List Question))
+isQuestion : Word -> Bool
+isQuestion w =
+    case w of
+        Question _ _ _ ->
+            True
+
+        Text _ ->
+            False
+
+
+questionDecoder : Decoder (List (List Word))
 questionDecoder =
+    let
+        mapper : String -> Maybe Answer -> Word
+        mapper s ma =
+            case ma of
+                Just a ->
+                    Question s a Nothing
+
+                Nothing ->
+                    Text s
+    in
     Decode.list
         (Decode.list <|
-            Decode.map2 (\s a -> Question s a Nothing)
+            Decode.map2 mapper
                 (Decode.field "word" Decode.string)
-                (Decode.field "answer" answerDecoder)
+                (Decode.maybe <| Decode.field "answer" answerDecoder)
         )
 
 
@@ -110,7 +131,7 @@ init v =
 
 type Msg
     = SetApplying Answer
-    | OnAnswer Question YourAnswer
+    | OnAnswer Word YourAnswer
     | OnSubmit
     | OnRestart
 
@@ -184,7 +205,7 @@ answerState model =
 ---------------------------------------------------
 
 
-viewQuestions : Submitted -> List Questions -> Element Msg
+viewQuestions : Submitted -> List Sentence -> Element Msg
 viewQuestions submitted questions =
     questions
         |> List.map (viewChipGroup submitted)
@@ -192,14 +213,24 @@ viewQuestions submitted questions =
         |> html
 
 
-viewChipGroup : Submitted -> Questions -> Html Msg
+viewChipGroup : Submitted -> Sentence -> Html Msg
 viewChipGroup submitted q =
     div [ class "pure-menu-horizontal" ]
-        [ ul [] (List.map (viewChipWithDropdown submitted) q)
+        [ ul [] (List.map (selectView submitted) q)
         ]
 
 
-viewChipWithDropdown : Submitted -> Question -> Html Msg
+selectView : Submitted -> Word -> Html Msg
+selectView submitted q =
+    case q of
+        Question str a a1 ->
+            viewChipWithDropdown submitted q
+
+        Text str ->
+            span [ class "pure-menu-item no-chip" ] [ Html.text str ]
+
+
+viewChipWithDropdown : Submitted -> Word -> Html Msg
 viewChipWithDropdown submitted q =
     div [ class "pure-menu-item pure-menu-allow-hover" ]
         [ span [ class "question-chip" ] [ viewClickableChip submitted q ]
@@ -207,25 +238,33 @@ viewChipWithDropdown submitted q =
         ]
 
 
-viewClickableChip : Submitted -> Question -> Html Msg
-viewClickableChip submitted ((Question str _ a) as q) =
-    let
-        icon =
-            answerSymbol a
-    in
-    div [ class "md-chips" ]
-        [ div [ class "md-chip md-chip-hover md-chip-clickable" ]
-            [ div [ class "md-chip-icon", classList [ ( "icon-unanswered", answerSymbol a == "?" ), ( "icon-wrong", submitted && isIncorrect q ) ] ] [ Html.text icon ]
-            , Html.text str
-            ]
-        ]
+viewClickableChip : Submitted -> Word -> Html Msg
+viewClickableChip submitted q =
+    case q of
+        Question str a a1 ->
+            let
+                icon =
+                    answerSymbol a1
+
+                isIncorrect =
+                    Just a /= a1
+            in
+            div [ class "md-chips" ]
+                [ div [ class "md-chip md-chip-hover md-chip-clickable" ]
+                    [ div [ class "md-chip-icon", classList [ ( "icon-unanswered", answerSymbol a1 == "?" ), ( "icon-wrong", submitted && isIncorrect ) ] ] [ Html.text icon ]
+                    , Html.text str
+                    ]
+                ]
+
+        Text _ ->
+            Html.text ""
 
 
 
 ---------------------------------------------------
 
 
-viewResults : List Questions -> Element Msg
+viewResults : List Sentence -> Element Msg
 viewResults questions =
     column []
         [ viewResultStatus questions
@@ -233,7 +272,7 @@ viewResults questions =
         ]
 
 
-viewResultStatus : List Questions -> Element Msg
+viewResultStatus : List Sentence -> Element Msg
 viewResultStatus qs =
     text ("You got " ++ fromInt (numCorrect qs) ++ "/" ++ fromInt (numQuestions qs) ++ " correct.")
 
@@ -252,12 +291,12 @@ viewRestart =
 ---------------------------------------------------
 
 
-dropdownChoices : Question -> List (Html Msg)
+dropdownChoices : Word -> List (Html Msg)
 dropdownChoices q =
     List.map (dropdownItem q) [ Ism, Fil, Harf ]
 
 
-dropdownItem : Question -> Answer -> Html Msg
+dropdownItem : Word -> Answer -> Html Msg
 dropdownItem q ans =
     li [ class "pure-menu-item" ] [ a [ Html.Events.onClick (OnAnswer q (Just ans)), class "pure-menu-link" ] [ Html.text (answerToString ans) ] ]
 

@@ -103,3 +103,7 @@ button.pure-menu-link {
     font-size: 80%;
 }
 
+.pure-menu-item.no-chip {
+    margin-right: 5px;
+    vertical-align: initial;
+}

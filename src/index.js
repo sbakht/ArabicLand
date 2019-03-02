@@ -23,7 +23,6 @@ Elm.App.init({
             },
             {
                 word: 'for',
-                answer: 'H'
             },
             {
                 word: 'dinner.',
