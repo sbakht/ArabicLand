@@ -17,9 +17,19 @@ type alias Model =
 
 
 type Answer
+    = WordType WordType
+
+
+type WordType
     = Ism
     | Fil
     | Harf
+
+
+type GrammarType
+    = Rafa
+    | Nasb
+    | Jar
 
 
 type alias YourAnswer =
@@ -111,13 +121,13 @@ answerDecoder =
             (\str ->
                 case str of
                     "I" ->
-                        Decode.succeed Ism
+                        Decode.succeed <| WordType Ism
 
                     "F" ->
-                        Decode.succeed Fil
+                        Decode.succeed <| WordType Fil
 
                     "H" ->
-                        Decode.succeed Harf
+                        Decode.succeed <| WordType Harf
 
                     _ ->
                         Decode.fail "Invalid answer choice"
@@ -293,7 +303,7 @@ viewRestart =
 
 dropdownChoices : Word -> List (Html Msg)
 dropdownChoices q =
-    List.map (dropdownItem q) [ Ism, Fil, Harf ]
+    List.map (dropdownItem q) [ WordType Ism, WordType Fil, WordType Harf ]
 
 
 dropdownItem : Word -> Answer -> Html Msg
@@ -304,26 +314,26 @@ dropdownItem q ans =
 answerToString : Answer -> String
 answerToString answer =
     case answer of
-        Ism ->
+        WordType Ism ->
             "Ism"
 
-        Fil ->
+        WordType Fil ->
             "Fil"
 
-        Harf ->
+        WordType Harf ->
             "Harf"
 
 
 answerSymbol : YourAnswer -> String
 answerSymbol a =
     case a of
-        Just Ism ->
+        Just (WordType Ism) ->
             "I"
 
-        Just Fil ->
+        Just (WordType Fil) ->
             "F"
 
-        Just Harf ->
+        Just (WordType Harf) ->
             "H"
 
         Nothing ->
