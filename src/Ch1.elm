@@ -17,7 +17,7 @@ type alias Model =
 
 
 type Answer
-    = WordType WordType
+    = WordType WordType | GrammarType GrammarType
 
 
 type WordType
@@ -322,6 +322,14 @@ answerToString answer =
 
         WordType Harf ->
             "Harf"
+        GrammarType Rafa ->
+            "Rafa"
+
+        GrammarType Nasb ->
+            "Nasb"
+
+        GrammarType Jar ->
+            "Jar"
 
 
 answerSymbol : YourAnswer -> String
@@ -335,6 +343,14 @@ answerSymbol a =
 
         Just (WordType Harf) ->
             "H"
+        Just (GrammarType Rafa) ->
+            "R"
+
+        Just (GrammarType Nasb) ->
+            "N"
+
+        Just (GrammarType Jar) ->
+            "J"
 
         Nothing ->
             "?"
