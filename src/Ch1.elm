@@ -17,7 +17,8 @@ type alias Model =
 
 
 type Answer
-    = WordType WordType | GrammarType GrammarType
+    = WordType WordType
+    | GrammarType GrammarType
 
 
 type WordType
@@ -128,6 +129,15 @@ answerDecoder =
 
                     "H" ->
                         Decode.succeed <| WordType Harf
+
+                    "R" ->
+                        Decode.succeed <| GrammarType Rafa
+
+                    "N" ->
+                        Decode.succeed <| GrammarType Nasb
+
+                    "J" ->
+                        Decode.succeed <| GrammarType Jar
 
                     _ ->
                         Decode.fail "Invalid answer choice"
@@ -303,7 +313,17 @@ viewRestart =
 
 dropdownChoices : Word -> List (Html Msg)
 dropdownChoices q =
-    List.map (dropdownItem q) [ WordType Ism, WordType Fil, WordType Harf ]
+    case q of
+        Question _ a _ ->
+            case a of
+                WordType _ ->
+                    List.map (dropdownItem q) [ WordType Ism, WordType Fil, WordType Harf ]
+
+                GrammarType _ ->
+                    List.map (dropdownItem q) [ GrammarType Rafa, GrammarType Nasb, GrammarType Jar ]
+
+        Text _ ->
+            []
 
 
 dropdownItem : Word -> Answer -> Html Msg
@@ -322,6 +342,7 @@ answerToString answer =
 
         WordType Harf ->
             "Harf"
+
         GrammarType Rafa ->
             "Rafa"
 
@@ -343,6 +364,7 @@ answerSymbol a =
 
         Just (WordType Harf) ->
             "H"
+
         Just (GrammarType Rafa) ->
             "R"
 
