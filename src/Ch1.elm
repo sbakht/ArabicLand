@@ -1,4 +1,4 @@
-module Ch1 exposing (Answer(..), Model, Msg(..), Question(..), YourAnswer, black, blue, clearAnswer, clickState, color, green, init, isCorrect, isIncorrect, isNotAnswered, numCorrect, numQuestions, red, setAnswer, update, view, viewAnswerKey, viewButtons, viewQuestion, viewQuestionAnswer, viewQuestions, viewRestart, viewResultStatus, viewSubmit)
+module Ch1 exposing (Model, Msg, init, update, view)
 
 import Element exposing (Attribute, Element, centerX, column, el, fill, html, htmlAttribute, layout, none, paragraph, rgb, row, text, width)
 import Element.Events exposing (onClick)
@@ -25,7 +25,14 @@ type Answer
 type alias YourAnswer =
     Maybe Answer
 
-type alias Questions = List Question
+
+type alias Submitted =
+    Bool
+
+
+type alias Questions =
+    List Question
+
 
 type Question
     = Question String Answer YourAnswer
@@ -65,25 +72,36 @@ numQuestions : List Questions -> Int
 numQuestions =
     List.length << concat
 
+
 questionDecoder : Decoder (List (List Question))
-questionDecoder =  Decode.list (Decode.list <| Decode.map2 (\s a -> Question s a Nothing)
-        (Decode.field "word" Decode.string)
-        (Decode.field "answer" answerDecoder)
-    )
+questionDecoder =
+    Decode.list
+        (Decode.list <|
+            Decode.map2 (\s a -> Question s a Nothing)
+                (Decode.field "word" Decode.string)
+                (Decode.field "answer" answerDecoder)
+        )
+
 
 answerDecoder : Decoder Answer
-answerDecoder = Decode.string
-    |> Decode.andThen (\str ->
-        case str of
-            "I" ->
-               Decode.succeed Ism
-            "F" ->
-                Decode.succeed Fil
-            "H" ->
-                Decode.succeed Harf
-            _ ->
-                Decode.fail "Invalid answer choice"
-    )
+answerDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\str ->
+                case str of
+                    "I" ->
+                        Decode.succeed Ism
+
+                    "F" ->
+                        Decode.succeed Fil
+
+                    "H" ->
+                        Decode.succeed Harf
+
+                    _ ->
+                        Decode.fail "Invalid answer choice"
+            )
+
 
 init : Value -> Model
 init v =
@@ -107,12 +125,13 @@ update msg model =
             let
                 updateAnswers =
                     List.map
-                        (List.map (\q ->
-                            if q == question then
-                                setAnswer q answer
+                        (List.map
+                            (\q ->
+                                if q == question then
+                                    setAnswer q answer
 
-                            else
-                                q
+                                else
+                                    q
                             )
                         )
                         model.questions
@@ -130,90 +149,88 @@ update msg model =
             ( { model | questions = resetAnswers, submitted = False, apply = Nothing }, Cmd.none )
 
 
+
+---------------------------------------------------
+
+
 view : Model -> Html Msg
 view model =
-    layout [] (column [width fill] [ viewQuestions model.questions viewQuestion, el [centerX] <| viewButtons model ])
+    layout []
+        (column [ width fill ]
+            (if model.submitted then
+                answerState model
+
+             else
+                quizState model
+            )
+        )
 
 
-viewQuestions : List Questions -> (Question -> Html Msg) -> Element Msg
-viewQuestions questions fn =
-    html <| div [] <| List.map (\q -> div [ class "pure-menu-horizontal"] <| [ul [] (List.map fn q)]) questions
-
-
-viewQuestion : Question -> Html Msg
-viewQuestion ((Question str _ a) as q) =
-    div [ class "pure-menu-item pure-menu-allow-hover"] [
-        span [ class "question-chip" ] [chip (answerSymbol a) str],
-        ul [ class "pure-menu-children"] (dropdownChoices q)
+quizState : Model -> List (Element Msg)
+quizState model =
+    [ viewQuestions model.submitted model.questions
+    , el [ centerX ] <| viewSubmit
     ]
 
-chip : String -> String -> Html Msg
-chip icon str = div [ class "md-chips"] [
-        div [ class "md-chip md-chip-hover md-chip-clickable"] [
-                div [ class "md-chip-icon", classList [("icon-unanswered", icon == "?")]] [Html.text icon],
-                Html.text str
-            ]
+
+answerState : Model -> List (Element Msg)
+answerState model =
+    [ viewQuestions model.submitted model.questions
+    , el [ centerX ] <| viewResults model.questions
     ]
 
-dropdownChoices : Question -> List (Html Msg)
-dropdownChoices q = List.map (dropdownItem q) [Ism, Fil, Harf]
-
-dropdownItem: Question -> Answer -> Html Msg
-dropdownItem q ans = li [class "pure-menu-item"] [a [Html.Events.onClick (OnAnswer q (Just ans)) , class "pure-menu-link"] [Html.text (answerToString ans)]]
 
 
-viewAnswerKey : List Questions -> (Question -> Element Msg) -> Element Msg
-viewAnswerKey qs fn =
-    if numCorrect qs < numQuestions qs then
---        column [] [ text "Answer Key", viewQuestions qs fn ]
-        none
-
-    else
-        none
+---------------------------------------------------
 
 
-viewQuestionAnswer : Question -> Element Msg
-viewQuestionAnswer (Question str a _) =
-    el [ color (Just a) ] (text str)
+viewQuestions : Submitted -> List Questions -> Element Msg
+viewQuestions submitted questions =
+    questions
+        |> List.map (viewChipGroup submitted)
+        |> div []
+        |> html
 
 
-answerToString : Answer -> String
-answerToString answer = case answer of
-    Ism ->
-        "Ism"
-    Fil ->
-        "Fil"
-    Harf ->
-        "Harf"
-
-answerSymbol : YourAnswer -> String
-answerSymbol a = case a of
-    Just Ism ->
-        "I"
-    Just Fil ->
-        "F"
-    Just Harf ->
-        "H"
-    Nothing ->
-        "?"
+viewChipGroup : Submitted -> Questions -> Html Msg
+viewChipGroup submitted q =
+    div [ class "pure-menu-horizontal" ]
+        [ ul [] (List.map (viewChipWithDropdown submitted) q)
+        ]
 
 
-clickState : String -> Answer -> YourAnswer -> Element Msg
-clickState label answer yourAns =
-    el [ onClick (SetApplying answer), classListC [ ( "apply-selected", Just answer == yourAns ) ], color (Just answer) ] (text label)
+viewChipWithDropdown : Submitted -> Question -> Html Msg
+viewChipWithDropdown submitted q =
+    div [ class "pure-menu-item pure-menu-allow-hover" ]
+        [ span [ class "question-chip" ] [ viewClickableChip submitted q ]
+        , ul [ class "pure-menu-children" ] (dropdownChoices q)
+        ]
 
 
-viewButtons : Model -> Element Msg
-viewButtons model =
-    if model.submitted then
-        column []
-            [ --viewAnswerKey model.questions viewQuestionAnswer
-              viewRestart
-            , viewResultStatus model.questions
+viewClickableChip : Submitted -> Question -> Html Msg
+viewClickableChip submitted ((Question str _ a) as q) =
+    let
+        icon =
+            answerSymbol a
+    in
+    div [ class "md-chips" ]
+        [ div [ class "md-chip md-chip-hover md-chip-clickable" ]
+            [ div [ class "md-chip-icon", classList [ ( "icon-unanswered", answerSymbol a == "?" ), ( "icon-wrong", submitted && isIncorrect q ) ] ] [ Html.text icon ]
+            , Html.text str
             ]
+        ]
 
-    else
-        viewSubmit
+
+
+---------------------------------------------------
+
+
+viewResults : List Questions -> Element Msg
+viewResults questions =
+    column []
+        [ viewResultStatus questions
+        , viewRestart
+        ]
 
 
 viewResultStatus : List Questions -> Element Msg
@@ -223,49 +240,52 @@ viewResultStatus qs =
 
 viewSubmit : Element Msg
 viewSubmit =
-    html <| Html.button [Html.Events.onClick OnSubmit, class "pure-button pure-button-primary"] [Html.text "Check Answers"]
+    html <| Html.button [ Html.Events.onClick OnSubmit, class "pure-button pure-button-primary" ] [ Html.text "Check Answers" ]
 
 
 viewRestart : Element Msg
 viewRestart =
-    html <| Html.button [Html.Events.onClick OnRestart, class "pure-button button-warning"] [Html.text "Start Over"]
+    html <| Html.button [ Html.Events.onClick OnRestart, class "pure-button button-warning" ] [ Html.text "Start Over" ]
 
 
-classC s =
-    htmlAttribute (Html.Attributes.class s)
+
+---------------------------------------------------
 
 
-classListC s =
-    htmlAttribute (classList s)
+dropdownChoices : Question -> List (Html Msg)
+dropdownChoices q =
+    List.map (dropdownItem q) [ Ism, Fil, Harf ]
 
 
-color : YourAnswer -> Attribute Msg
-color a =
+dropdownItem : Question -> Answer -> Html Msg
+dropdownItem q ans =
+    li [ class "pure-menu-item" ] [ a [ Html.Events.onClick (OnAnswer q (Just ans)), class "pure-menu-link" ] [ Html.text (answerToString ans) ] ]
+
+
+answerToString : Answer -> String
+answerToString answer =
+    case answer of
+        Ism ->
+            "Ism"
+
+        Fil ->
+            "Fil"
+
+        Harf ->
+            "Harf"
+
+
+answerSymbol : YourAnswer -> String
+answerSymbol a =
     case a of
         Just Ism ->
-            green
+            "I"
 
         Just Fil ->
-            red
+            "F"
 
         Just Harf ->
-            blue
+            "H"
 
         Nothing ->
-            black
-
-
-green =
-    Font.color <| rgb 0 255 0
-
-
-red =
-    Font.color <| rgb 255 0 0
-
-
-blue =
-    Font.color <| rgb 0 0 255
-
-
-black =
-    Font.color <| rgb 0 0 0
+            "?"
