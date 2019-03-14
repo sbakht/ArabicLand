@@ -133,9 +133,21 @@ window.data = [
     ],
 ];
 
+window.data = [
+    {
+        text: 'bob',
+        questions: [
+            {
+                type: 'radio',
+                answer: 'R'
+            }
+        ]
+    }
+];
+
 Elm.App.init({
   node: document.getElementById('root'),
-  flags: {ch: 'ch1',
+  flags: {ch: 'ch2',
     data: window.data,
   }
 });

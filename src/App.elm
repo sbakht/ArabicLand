@@ -34,7 +34,7 @@ init chapter =
             ( { page = Ch1Model <| Ch1.init chapter.data }, Cmd.none )
 
         "ch2" ->
-            ( { page = Ch2Model Ch2.init }, Cmd.none )
+            ( { page = Ch2Model <| Ch2.init chapter.data }, Cmd.none )
 
         "grammar" ->
             ( { page = GrammarModel Grammar.init }, Cmd.none )
