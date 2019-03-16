@@ -64,6 +64,9 @@ updatePage page msg model =
         ( Ch1Msg subMsg, Ch1Model subModel ) ->
             toPage Ch1Model Ch1Msg Ch1.update subMsg subModel
 
+        ( Ch2Msg subMsg, Ch2Model subModel ) ->
+            toPage Ch2Model Ch2Msg Ch2.update subMsg subModel
+
         ( _, _ ) ->
             ( model, Cmd.none )
 

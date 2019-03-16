@@ -140,6 +140,10 @@ window.data = [
             {
                 type: 'radio',
                 answer: 'R'
+            },
+            {
+                type: 'radio',
+                answer: 'H'
             }
         ]
     }
