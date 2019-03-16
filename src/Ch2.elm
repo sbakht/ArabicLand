@@ -1,16 +1,16 @@
 module Ch2 exposing (Model, Msg, init, update, view)
 
-import Element exposing (Attribute, Element, centerX, column, el, fill, html, htmlAttribute, layout, none, paragraph, rgb, row, width)
+import Element exposing (Attribute, Element, centerX, column, el, fill, html, layout, width)
 import Html exposing (Html, a, div, input, label, li, span, text, ul)
-import Html.Attributes exposing (checked, class, classList, name, type_)
-import Html.Events exposing (onCheck, onClick, onInput)
-import Json.Decode as Decode exposing (Decoder, Value, decodeValue, succeed)
+import Html.Attributes exposing (checked, class, name, type_)
+import Html.Events exposing (onClick)
+import Json.Decode as Decode exposing (Decoder, Value, decodeValue)
 import List exposing (concat)
 import String exposing (fromInt)
 
 
 type alias Model =
-    { questions : List Exercise, apply : Maybe Answer, submitted : Bool }
+    { exercises : List Exercise, apply : Maybe Answer, submitted : Bool }
 
 
 type Answer
@@ -21,6 +21,13 @@ type Answer
 type alias Exercise =
     { text : String
     , questions : List QuestionType
+    , id : Int
+    }
+
+
+type alias Question =
+    { questionType : QuestionType
+    , id : Int
     }
 
 
@@ -40,31 +47,49 @@ type GrammarType
     | Jar
 
 
+type ID
+    = ID Int Int
+
+
 type alias YourAnswer =
     Maybe Answer
+
+
+
+------- Helper Alias
 
 
 type alias Submitted =
     Bool
 
 
-type alias Sentence =
-    List Word
+type alias RadioName =
+    String
 
 
-type Word
-    = Question String Answer YourAnswer
-    | Text String
+type alias RadioValue =
+    Answer
 
 
-isCorrect : Word -> Maybe Bool
-isCorrect w =
-    case w of
-        Question _ a a1 ->
-            Just <| Just a == a1
+type alias RadioType =
+    Answer
 
-        Text _ ->
-            Nothing
+
+
+--------
+--type alias Sentence =
+--    List Word
+--type Word
+--    = Question String Answer YourAnswer
+--    | Text String
+--isCorrect : Word -> Maybe Bool
+--isCorrect w =
+--    case w of
+--        Question _ a a1 ->
+--            Just <| Just a == a1
+--
+--        Text _ ->
+--            Nothing
 
 
 setAnswer : QuestionType -> YourAnswer -> QuestionType
@@ -79,30 +104,24 @@ clearAnswer q =
     setAnswer q Nothing
 
 
-numCorrect : List Sentence -> Int
-numCorrect =
-    List.length << List.filter (\x -> x) << List.filterMap isCorrect << concat
+
+--numCorrect : List Sentence -> Int
+--numCorrect =
+--    List.length << List.filter (\x -> x) << List.filterMap isCorrect << concat
+--numQuestions : List Sentence -> Int
+--numQuestions =
+--    List.length << List.filter isQuestion << concat
 
 
-numQuestions : List Sentence -> Int
-numQuestions =
-    List.length << List.filter isQuestion << concat
-
-
-isQuestion : Word -> Bool
-isQuestion w =
-    case w of
-        Question _ _ _ ->
-            True
-
-        Text _ ->
-            False
+mkIDs : List Exercise -> List Exercise
+mkIDs =
+    List.indexedMap (\i x -> { x | id = i })
 
 
 questionDecoder : Decoder (List Exercise)
 questionDecoder =
     Decode.list
-        (Decode.map2 Exercise
+        (Decode.map3 Exercise
             (Decode.field "text" Decode.string)
             (Decode.field "questions" <|
                 Decode.list
@@ -111,6 +130,7 @@ questionDecoder =
                         (Decode.field "answer" answerDecoder)
                     )
             )
+            (Decode.succeed -1)
         )
 
 
@@ -159,12 +179,12 @@ answerDecoder =
 
 init : Value -> Model
 init v =
-    { questions = Debug.log "test" <| Result.withDefault [] (decodeValue questionDecoder v), apply = Nothing, submitted = False }
+    { exercises = mkIDs <| Result.withDefault [] (decodeValue questionDecoder v), apply = Nothing, submitted = False }
 
 
 type Msg
     = SetApplying Answer
-    | OnAnswer Exercise QuestionType Answer
+    | OnAnswer ID Answer
     | OnSubmit
     | OnRestart
 
@@ -175,31 +195,31 @@ update msg model =
         SetApplying a ->
             ( { model | apply = Just a }, Cmd.none )
 
-        OnAnswer exercise r newAnswer ->
+        OnAnswer (ID exerciseID questionID) newAnswer ->
             let
-                updateAnswers =
+                updateExercise =
                     List.map
                         (\x ->
-                            if x == exercise then
-                                { x | questions = updated x.questions }
+                            if x.id == exerciseID then
+                                { x | questions = updateAnswer x.questions }
 
                             else
                                 x
                         )
-                        model.questions
+                        model.exercises
 
-                updated qTypes =
-                    List.map
-                        (\qt ->
-                            if qt == r then
-                                setAnswer r (Just newAnswer)
+                updateAnswer qTypes =
+                    List.indexedMap
+                        (\qID qt ->
+                            if qID == questionID then
+                                setAnswer qt (Just newAnswer)
 
                             else
                                 qt
                         )
                         qTypes
             in
-            ( { model | questions = updateAnswers }, Cmd.none )
+            ( { model | exercises = updateExercise }, Cmd.none )
 
         OnSubmit ->
             ( { model | submitted = True }, Cmd.none )
@@ -228,7 +248,7 @@ view model =
 
 quizState : Model -> List (Element Msg)
 quizState model =
-    [ html <| viewExercises model.submitted model.questions
+    [ html <| viewExercises model.submitted model.exercises
     , el [ centerX ] <| viewSubmit
     ]
 
@@ -261,46 +281,47 @@ viewXText s =
 
 viewQuestions : Exercise -> Html Msg
 viewQuestions x =
-    div [] <| List.map (viewQuestionType x) x.questions
+    div [] <| List.indexedMap (\i a -> viewQuestion (ID x.id i) a) x.questions
 
 
-viewQuestionType : Exercise -> QuestionType -> Html Msg
-viewQuestionType x q =
+viewQuestion : ID -> QuestionType -> Html Msg
+viewQuestion id q =
     case q of
         Radio ans yrAns ->
-            viewRadio x ans yrAns
+            viewRadio id ans yrAns
 
 
-viewRadio : Exercise -> Answer -> YourAnswer -> Html Msg
-viewRadio x ans yourAns =
+viewRadio : ID -> RadioType -> YourAnswer -> Html Msg
+viewRadio id ans yourAns =
+    let
+        mkRadioGroup : List RadioValue -> Html Msg
+        mkRadioGroup =
+            div [] << List.map (radio id (idToString id) yourAns)
+    in
     case ans of
-        WordType w ->
-            div [] <| List.map (radio x ans "w" yourAns) <| getWordTypes
+        WordType _ ->
+            mkRadioGroup getWordTypes
 
-        GrammarType w ->
-            div [] <| List.map (radio x ans "g" yourAns) <| getGrammarTypes
+        GrammarType _ ->
+            mkRadioGroup getGrammarTypes
 
 
-radio : Exercise -> Answer -> String -> YourAnswer -> Answer -> Html Msg
-radio x ans rName yourAns val =
-    label [] [ input [ type_ "radio", name rName, checked (yourAns == Just val), onInput (\_ -> OnAnswer x (Radio ans yourAns) val) ] [], text (toSymbol val) ]
+radio : ID -> RadioName -> YourAnswer -> RadioValue -> Html Msg
+radio id rName selected val =
+    label [] [ input [ type_ "radio", name rName, checked (selected == Just val), onClick (OnAnswer id val) ] [], text (toSymbol val) ]
 
 
 
 ---------------------------------------------------
-
-
-viewResults : List Sentence -> Element Msg
-viewResults questions =
-    column []
-        [ viewResultStatus questions
-        , viewRestart
-        ]
-
-
-viewResultStatus : List Sentence -> Element Msg
-viewResultStatus qs =
-    Element.text ("You got " ++ fromInt (numCorrect qs) ++ "/" ++ fromInt (numQuestions qs) ++ " correct.")
+--viewResults : List Sentence -> Element Msg
+--viewResults questions =
+--    column []
+--        [ viewResultStatus questions
+--        , viewRestart
+--        ]
+--viewResultStatus : List Sentence -> Element Msg
+--viewResultStatus qs =
+--    Element.text ("You got " ++ fromInt (numCorrect qs) ++ "/" ++ fromInt (numQuestions qs) ++ " correct.")
 
 
 viewSubmit : Element Msg
@@ -325,6 +346,11 @@ getWordTypes =
 getGrammarTypes : List Answer
 getGrammarTypes =
     List.map GrammarType [ Rafa, Nasb, Jar ]
+
+
+idToString : ID -> String
+idToString (ID i j) =
+    fromInt i ++ "-" ++ fromInt j
 
 
 answerToString : Answer -> String
