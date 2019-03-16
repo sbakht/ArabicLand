@@ -1,7 +1,7 @@
 module Ch2 exposing (Model, Msg, init, update, view)
 
 import Element exposing (Attribute, Element, centerX, column, el, fill, html, layout, width)
-import Html exposing (Html, a, div, input, label, li, span, text, ul)
+import Html exposing (Html, a, div, input, label, li, span, table, td, text, tr, ul)
 import Html.Attributes exposing (checked, class, name, type_)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode exposing (Decoder, Value, decodeValue)
@@ -266,29 +266,33 @@ quizState model =
 
 viewExercises : Bool -> List Exercise -> Html Msg
 viewExercises bool xs =
-    ul [] <| List.map viewExercise xs
+    table [] <| List.map viewExercise xs
 
 
 viewExercise : Exercise -> Html Msg
 viewExercise x =
-    li [] [ viewXText x.text, viewQuestions x ]
+    tr [] ( viewXText x.text :: viewQuestions x )
 
 
 viewXText : String -> Html Msg
 viewXText s =
-    span [] [ text s ]
+    td [] [span [] [ text s ]]
 
 
-viewQuestions : Exercise -> Html Msg
+viewQuestions : Exercise -> List (Html Msg)
 viewQuestions x =
-    div [] <| List.indexedMap (\i a -> viewQuestion (ID x.id i) a) x.questions
+    List.indexedMap (\i a -> viewQuestion (ID x.id i) a) x.questions
 
 
 viewQuestion : ID -> QuestionType -> Html Msg
 viewQuestion id q =
-    case q of
-        Radio ans yrAns ->
-            viewRadio id ans yrAns
+    let
+        go =
+            case q of
+                Radio ans yrAns ->
+                    viewRadio id ans yrAns
+    in
+    td [] [go]
 
 
 viewRadio : ID -> RadioType -> YourAnswer -> Html Msg
