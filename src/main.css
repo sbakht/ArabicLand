@@ -7,6 +7,10 @@ img {
   max-width: 200px;
 }
 
+td, th {
+    padding: 8px 12px;
+}
+
 .Mubtada, .Kabr {
     color: green;
 }
