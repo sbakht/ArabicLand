@@ -5,19 +5,23 @@ import Html exposing (Html, a, div, input, label, li, span, table, td, text, tr,
 import Html.Attributes exposing (checked, class, name, type_)
 import Html.Events exposing (onClick)
 import Json.Decode as Decode exposing (Decoder, Value, decodeValue)
+import Json.Decode.Pipeline exposing (hardcoded, required)
 import List exposing (concat)
 import String exposing (fromInt)
 
 
 type alias Model =
-    { exercises : List Exercise, apply : Maybe Answer, submitted : Bool }
+    { exercises : List Exercise, apply : Maybe RadioAnswer, submitted : Bool }
 
 
-type Answer
+type RadioAnswer
     = WordType WordType
     | GrammarType GrammarType
 
-type InputType = InputType String
+
+type InputType
+    = InputType String
+
 
 type alias Exercise =
     { text : String
@@ -34,9 +38,15 @@ type alias Question =
 
 type QuestionType
     = RadioQuestion Radio
---      | Write InputType (Maybe InputType)
+    | WriteQuestion Write
 
-type Radio = Radio Answer YourAnswer
+
+type Radio
+    = Radio RadioAnswer YourRadioAnswer
+
+
+type Write
+    = Write InputType (Maybe InputType)
 
 
 type WordType
@@ -55,8 +65,8 @@ type ID
     = ID Int Int
 
 
-type alias YourAnswer =
-    Maybe Answer
+type alias YourRadioAnswer =
+    Maybe RadioAnswer
 
 
 
@@ -72,8 +82,7 @@ type alias RadioName =
 
 
 type alias RadioValue =
-    Answer
-
+    RadioAnswer
 
 
 
@@ -91,23 +100,29 @@ type alias RadioValue =
 --
 --        Text _ ->
 --            Nothing
+--setAnswer : QuestionType -> YourAnswer -> QuestionType
+--setAnswer w ans =
+--    case w of
+--        RadioQuestion (Radio a _) ->
+--            RadioQuestion <| Radio a ans
+----        Write a _ ->
+----            Write a ans
 
 
-setAnswer : QuestionType -> YourAnswer -> QuestionType
-setAnswer w ans =
-    case w of
-        RadioQuestion (Radio a _) ->
-            RadioQuestion <| Radio a ans
---        Write a _ ->
---            Write a ans
+setRadioAnswer : Radio -> YourRadioAnswer -> QuestionType
+setRadioAnswer (Radio a _) ans =
+    RadioQuestion <| Radio a ans
 
 
-clearAnswer : QuestionType -> QuestionType
-clearAnswer q =
-    setAnswer q Nothing
+setWriteAnswer : Write -> Maybe InputType -> QuestionType
+setWriteAnswer (Write a _) ans =
+    WriteQuestion <| Write a ans
 
 
 
+--clearAnswer : QuestionType -> QuestionType
+--clearAnswer q =
+--    setAnswer q Nothing
 --numCorrect : List Sentence -> Int
 --numCorrect =
 --    List.length << List.filter (\x -> x) << List.filterMap isCorrect << concat
@@ -121,73 +136,79 @@ mkIDs =
     List.indexedMap (\i x -> { x | id = i })
 
 
-questionDecoder : Decoder (List Exercise)
-questionDecoder =
+exercisesDecoder : Decoder (List Exercise)
+exercisesDecoder =
     Decode.list
-        (Decode.map3 Exercise
-            (Decode.field "text" Decode.string)
-            (Decode.field "questions" <|
-                Decode.list
-                    (Decode.map2 (\x y -> x y Nothing)
-                        (Decode.field "type" questionTypeDecoder)
-                        (Decode.field "answer" answerDecoder)
-                    )
-            )
-            (Decode.succeed -1)
+        (Decode.succeed Exercise
+            |> required "text" Decode.string
+            |> required "questions" questionsDecoder
+            |> hardcoded -1
         )
 
 
-questionTypeDecoder : Decoder (Answer -> YourAnswer -> QuestionType)
-questionTypeDecoder =
-    Decode.string
-        |> Decode.andThen
-            (\str ->
-                case str of
-                    "radio" ->
-                        Decode.succeed (\a b -> RadioQuestion <| Radio a b)
-
-                    _ ->
-                        Decode.fail "Invalid question type"
-            )
+questionsDecoder : Decoder (List QuestionType)
+questionsDecoder =
+    Decode.list questionDecoder
 
 
-answerDecoder : Decoder Answer
+questionDecoder : Decoder QuestionType
+questionDecoder =
+    Decode.andThen questionFromType (Decode.field "type" Decode.string)
+
+
+questionFromType : String -> Decoder QuestionType
+questionFromType str =
+    case str of
+        "radio" ->
+            Decode.map (\ans -> RadioQuestion <| Radio ans Nothing)
+                (Decode.andThen radioAnswerFromSymbol answerDecoder)
+
+        "input" ->
+            Decode.map (\ans -> WriteQuestion <| Write ans Nothing)
+                (Decode.map InputType answerDecoder)
+
+        _ ->
+            Decode.fail "Invalid question type"
+
+
+answerDecoder : Decoder String
 answerDecoder =
-    Decode.string
-        |> Decode.andThen
-            (\str ->
-                case str of
-                    "I" ->
-                        Decode.succeed <| WordType Ism
+    Decode.field "answer" Decode.string
 
-                    "F" ->
-                        Decode.succeed <| WordType Fil
 
-                    "H" ->
-                        Decode.succeed <| WordType Harf
+radioAnswerFromSymbol : String -> Decoder RadioAnswer
+radioAnswerFromSymbol str =
+    case str of
+        "I" ->
+            Decode.succeed <| WordType Ism
 
-                    "R" ->
-                        Decode.succeed <| GrammarType Rafa
+        "F" ->
+            Decode.succeed <| WordType Fil
 
-                    "N" ->
-                        Decode.succeed <| GrammarType Nasb
+        "H" ->
+            Decode.succeed <| WordType Harf
 
-                    "J" ->
-                        Decode.succeed <| GrammarType Jar
+        "R" ->
+            Decode.succeed <| GrammarType Rafa
 
-                    _ ->
-                        Decode.fail "Invalid answer choice"
-            )
+        "N" ->
+            Decode.succeed <| GrammarType Nasb
+
+        "J" ->
+            Decode.succeed <| GrammarType Jar
+
+        _ ->
+            Decode.fail "Invalid answer choice"
 
 
 init : Value -> Model
 init v =
-    { exercises = mkIDs <| Result.withDefault [] (decodeValue questionDecoder v), apply = Nothing, submitted = False }
+    { exercises = mkIDs <| Result.withDefault [] (decodeValue exercisesDecoder v), apply = Nothing, submitted = False }
 
 
 type Msg
-    = SetApplying Answer
-    | OnAnswer ID Answer
+    = SetApplying RadioAnswer
+    | OnRadioAnswer ID RadioAnswer
     | OnSubmit
     | OnRestart
 
@@ -198,7 +219,7 @@ update msg model =
         SetApplying a ->
             ( { model | apply = Just a }, Cmd.none )
 
-        OnAnswer (ID exerciseID questionID) newAnswer ->
+        OnRadioAnswer (ID exerciseID questionID) newAnswer ->
             let
                 updateExercise =
                     List.map
@@ -214,11 +235,16 @@ update msg model =
                 updateAnswer qTypes =
                     List.indexedMap
                         (\qID qt ->
-                            if qID == questionID then
-                                setAnswer qt (Just newAnswer)
+                            case qt of
+                                RadioQuestion radio ->
+                                    if qID == questionID then
+                                        setRadioAnswer radio (Just newAnswer)
 
-                            else
-                                qt
+                                    else
+                                        qt
+
+                                _ ->
+                                    qt
                         )
                         qTypes
             in
@@ -274,12 +300,12 @@ viewExercises bool xs =
 
 viewExercise : Exercise -> Html Msg
 viewExercise x =
-    tr [] ( viewXText x.text :: viewQuestions x )
+    tr [] (viewXText x.text :: viewQuestions x)
 
 
 viewXText : String -> Html Msg
 viewXText s =
-    td [] [span [] [ text s ]]
+    td [] [ span [] [ text s ] ]
 
 
 viewQuestions : Exercise -> List (Html Msg)
@@ -294,10 +320,11 @@ viewQuestion id q =
             case q of
                 RadioQuestion radio ->
                     viewRadio id radio
---                Write ans yrAns ->
---                    span [] []
+
+                WriteQuestion write ->
+                    span [] []
     in
-    td [] [go]
+    td [] [ go ]
 
 
 viewRadio : ID -> Radio -> Html Msg
@@ -313,12 +340,15 @@ viewRadio id (Radio ans yourAns) =
 
         GrammarType _ ->
             mkRadioGroup getGrammarTypes
+
+
+
 --        InputType _ ->
 
 
-mkRadio : ID -> RadioName -> YourAnswer -> RadioValue -> Html Msg
+mkRadio : ID -> RadioName -> YourRadioAnswer -> RadioValue -> Html Msg
 mkRadio id rName selected val =
-    label [] [ input [ type_ "radio", name rName, checked (selected == Just val), onClick (OnAnswer id val) ] [], text (toSymbol val) ]
+    label [] [ input [ type_ "radio", name rName, checked (selected == Just val), onClick (OnRadioAnswer id val) ] [], text (toSymbol val) ]
 
 
 
@@ -348,12 +378,12 @@ viewRestart =
 ---------------------------------------------------
 
 
-getWordTypes : List Answer
+getWordTypes : List RadioAnswer
 getWordTypes =
     List.map WordType [ Ism, Fil, Harf ]
 
 
-getGrammarTypes : List Answer
+getGrammarTypes : List RadioAnswer
 getGrammarTypes =
     List.map GrammarType [ Rafa, Nasb, Jar ]
 
@@ -363,7 +393,7 @@ idToString (ID i j) =
     fromInt i ++ "-" ++ fromInt j
 
 
-answerToString : Answer -> String
+answerToString : RadioAnswer -> String
 answerToString answer =
     case answer of
         WordType Ism ->
@@ -385,7 +415,7 @@ answerToString answer =
             "Jar"
 
 
-answerSymbol : YourAnswer -> String
+answerSymbol : YourRadioAnswer -> String
 answerSymbol a =
     case a of
         Just (WordType Ism) ->
@@ -410,6 +440,6 @@ answerSymbol a =
             "?"
 
 
-toSymbol : Answer -> String
+toSymbol : RadioAnswer -> String
 toSymbol =
     answerSymbol << Just

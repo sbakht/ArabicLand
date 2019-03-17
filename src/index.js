@@ -144,6 +144,10 @@ window.data = [
             {
                 type: 'radio',
                 answer: 'H'
+            },
+            {
+                type: 'input',
+                answer: 'fluffy'
             }
         ]
     }
