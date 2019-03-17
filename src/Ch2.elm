@@ -3,7 +3,7 @@ module Ch2 exposing (Model, Msg, init, update, view)
 import Element exposing (Attribute, Element, centerX, column, el, fill, html, layout, width)
 import Html exposing (Html, a, div, input, label, li, span, table, td, text, tr, ul)
 import Html.Attributes exposing (checked, class, name, type_)
-import Html.Events exposing (onClick)
+import Html.Events exposing (onClick, onInput)
 import Json.Decode as Decode exposing (Decoder, Value, decodeValue)
 import Json.Decode.Pipeline exposing (hardcoded, required)
 import List exposing (concat)
@@ -209,8 +209,21 @@ init v =
 type Msg
     = SetApplying RadioAnswer
     | OnRadioAnswer ID RadioAnswer
+    | OnWriteAnswer ID InputType
     | OnSubmit
     | OnRestart
+
+
+updateExercise exercises exerciseID fn =
+    List.map
+        (\x ->
+            if x.id == exerciseID then
+                { x | questions = fn x.questions }
+
+            else
+                x
+        )
+        exercises
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -221,17 +234,6 @@ update msg model =
 
         OnRadioAnswer (ID exerciseID questionID) newAnswer ->
             let
-                updateExercise =
-                    List.map
-                        (\x ->
-                            if x.id == exerciseID then
-                                { x | questions = updateAnswer x.questions }
-
-                            else
-                                x
-                        )
-                        model.exercises
-
                 updateAnswer qTypes =
                     List.indexedMap
                         (\qID qt ->
@@ -248,7 +250,27 @@ update msg model =
                         )
                         qTypes
             in
-            ( { model | exercises = updateExercise }, Cmd.none )
+            ( { model | exercises = updateExercise model.exercises exerciseID updateAnswer }, Cmd.none )
+
+        OnWriteAnswer (ID exerciseID questionID) newAnswer ->
+            let
+                updateAnswer qTypes =
+                    List.indexedMap
+                        (\qID qt ->
+                            case qt of
+                                WriteQuestion write ->
+                                    if qID == questionID then
+                                        setWriteAnswer write (Just newAnswer)
+
+                                    else
+                                        qt
+
+                                _ ->
+                                    qt
+                        )
+                        qTypes
+            in
+            ( { model | exercises = updateExercise model.exercises exerciseID updateAnswer }, Cmd.none )
 
         OnSubmit ->
             ( { model | submitted = True }, Cmd.none )
@@ -322,7 +344,7 @@ viewQuestion id q =
                     viewRadio id radio
 
                 WriteQuestion write ->
-                    span [] []
+                    viewWrite id write
     in
     td [] [ go ]
 
@@ -342,13 +364,14 @@ viewRadio id (Radio ans yourAns) =
             mkRadioGroup getGrammarTypes
 
 
-
---        InputType _ ->
-
-
 mkRadio : ID -> RadioName -> YourRadioAnswer -> RadioValue -> Html Msg
 mkRadio id rName selected val =
     label [] [ input [ type_ "radio", name rName, checked (selected == Just val), onClick (OnRadioAnswer id val) ] [], text (toSymbol val) ]
+
+
+viewWrite : ID -> Write -> Html Msg
+viewWrite id (Write ans yourAns) =
+    input [ type_ "text", onInput (OnWriteAnswer id << InputType) ] []
 
 
 
