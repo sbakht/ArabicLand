@@ -17,6 +17,7 @@ type Answer
     = WordType WordType
     | GrammarType GrammarType
 
+type InputType = InputType String
 
 type alias Exercise =
     { text : String
@@ -32,7 +33,10 @@ type alias Question =
 
 
 type QuestionType
-    = Radio Answer YourAnswer
+    = RadioQuestion Radio
+--      | Write InputType (Maybe InputType)
+
+type Radio = Radio Answer YourAnswer
 
 
 type WordType
@@ -71,9 +75,6 @@ type alias RadioValue =
     Answer
 
 
-type alias RadioType =
-    Answer
-
 
 
 --------
@@ -95,8 +96,10 @@ type alias RadioType =
 setAnswer : QuestionType -> YourAnswer -> QuestionType
 setAnswer w ans =
     case w of
-        Radio a _ ->
-            Radio a ans
+        RadioQuestion (Radio a _) ->
+            RadioQuestion <| Radio a ans
+--        Write a _ ->
+--            Write a ans
 
 
 clearAnswer : QuestionType -> QuestionType
@@ -141,7 +144,7 @@ questionTypeDecoder =
             (\str ->
                 case str of
                     "radio" ->
-                        Decode.succeed Radio
+                        Decode.succeed (\a b -> RadioQuestion <| Radio a b)
 
                     _ ->
                         Decode.fail "Invalid question type"
@@ -289,18 +292,20 @@ viewQuestion id q =
     let
         go =
             case q of
-                Radio ans yrAns ->
-                    viewRadio id ans yrAns
+                RadioQuestion radio ->
+                    viewRadio id radio
+--                Write ans yrAns ->
+--                    span [] []
     in
     td [] [go]
 
 
-viewRadio : ID -> RadioType -> YourAnswer -> Html Msg
-viewRadio id ans yourAns =
+viewRadio : ID -> Radio -> Html Msg
+viewRadio id (Radio ans yourAns) =
     let
         mkRadioGroup : List RadioValue -> Html Msg
         mkRadioGroup =
-            div [] << List.map (radio id (idToString id) yourAns)
+            div [] << List.map (mkRadio id (idToString id) yourAns)
     in
     case ans of
         WordType _ ->
@@ -308,10 +313,11 @@ viewRadio id ans yourAns =
 
         GrammarType _ ->
             mkRadioGroup getGrammarTypes
+--        InputType _ ->
 
 
-radio : ID -> RadioName -> YourAnswer -> RadioValue -> Html Msg
-radio id rName selected val =
+mkRadio : ID -> RadioName -> YourAnswer -> RadioValue -> Html Msg
+mkRadio id rName selected val =
     label [] [ input [ type_ "radio", name rName, checked (selected == Just val), onClick (OnAnswer id val) ] [], text (toSymbol val) ]
 
 
